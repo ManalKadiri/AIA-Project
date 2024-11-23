@@ -13,4 +13,4 @@ pytest
 requests
 boto3
 mock
-
+imbalanced-learn
