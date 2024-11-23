@@ -11,7 +11,7 @@ def test_data_columns():
         df['age'] = ((datetime.now() - pd.to_datetime(df['dob'], errors='coerce')) / pd.Timedelta(days=365.25)).astype(int)
 
     # Liste des colonnes requises
-    required_columns = ["amt", "gender", "lat", "long", "age, "merch_lat", "merch_long", "is_fraud"]
+    required_columns = ["amt", "gender", "lat", "long", "age", "merch_lat", "merch_long", "is_fraud"]
 
     # Vérifier les colonnes manquantes
     missing_columns = set(required_columns) - set(df.columns)
