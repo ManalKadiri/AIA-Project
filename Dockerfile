@@ -15,6 +15,7 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 # Copier le fichier requirements.txt et installer les packages Python requis
 COPY requirements.txt /dependencies/requirements.txt
 RUN pip install -r /dependencies/requirements.txt
+RUN pip install pytest
 
 # Définir une variable d'environnement non sensible
 ENV PORT=5000
