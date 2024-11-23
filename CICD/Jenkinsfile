@@ -54,7 +54,7 @@ APP_URI=${APP_URI}
         
         stage('Run Tests') {
             steps {
-                dir('mlflow') {
+                dir('CICD/mlflow') {
                     script {
                         // Lancer les tests dans le conteneur Docker
                         sh """
@@ -67,6 +67,8 @@ APP_URI=${APP_URI}
                 }
             }
         }
+
+        
         stage('Post-build Cleanup') {
             steps {
                 echo "Cleaning up..."
