@@ -45,6 +45,21 @@ APP_URI=${APP_URI}
                 }
             }
         }
+        stage('Run Tests') {
+            steps {
+                dir('mlflow') {
+                    script {
+                        // Lancer les tests dans le conteneur Docker
+                        sh """
+                        docker run --env-file .env \
+                            -v "\$(pwd)/tests:/home/app/tests" \
+                            -v "\$(pwd)/mlflow:/home/app/mlflow" \
+                            mlflow-image pytest /home/app/tests --disable-warnings
+                        """
+                    }
+                }
+            }
+        }
         stage('Post-build Cleanup') {
             steps {
                 echo "Cleaning up..."
@@ -53,5 +68,6 @@ APP_URI=${APP_URI}
         }
     }
 }
+
 
 
