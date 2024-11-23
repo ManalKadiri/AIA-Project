@@ -22,21 +22,25 @@ pipeline {
             }
         }
     }
+
         stage('Generate .env File') {
             steps {
-                script {
-                    // Créez dynamiquement le fichier .env dans le dossier mlflow
-                    writeFile file: 'mlflow/.env', text: """
+                dir('CICD/mlflow') { // Naviguer dans le bon répertoire
+                    script {
+                        writeFile file: '.env', text: """
 AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
 AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 BACKEND_STORE_URI=${BACKEND_STORE_URI}
 ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
 APP_URI=${APP_URI}
 """
+                    }
+            // Vérifiez si le fichier .env est bien généré
+                    sh 'echo "Vérification du fichier .env :" && ls -la && cat .env'
                 }
             }
         }
-        
+
         stage('Run Training Script') {
             steps {
                 dir('CICD/mlflow') {
