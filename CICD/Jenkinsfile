@@ -37,7 +37,6 @@ pipeline {
             }
         }
 
-
         stage('Generate .env File') {
             steps {
                 dir('CICD/mlflow') { // Naviguer dans le bon répertoire
@@ -78,6 +77,19 @@ APP_URI=${APP_URI}
                             mlflow-image pytest /home/app/tests --disable-warnings
                         """
                     }
+                }
+            }
+        }
+
+        stage('Run Model Validation') {
+            steps {
+                dir('CICD/mlflow') {
+                    echo "Running model validation script..."
+                    sh """
+                    docker run --env-file .env \
+                        -v "\$(pwd):/home/app" mlflow-image \
+                        python /home/app/validate_model.py
+                    """
                 }
             }
         }
