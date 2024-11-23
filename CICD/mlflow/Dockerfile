@@ -24,6 +24,7 @@ COPY requirements.txt /dependencies/requirements.txt
 
 # Installer les packages Python requis
 RUN pip install --no-cache-dir -r /dependencies/requirements.txt
+RUN pip install pytest requests
 
 # Définir une variable d'environnement non sensible pour le port
 ENV PORT=5000
