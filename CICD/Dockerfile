@@ -16,6 +16,8 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 COPY requirements.txt /dependencies/requirements.txt
 RUN pip install -r /dependencies/requirements.txt
 RUN pip install pytest
+RUN pip install pytest requests
+
 
 # Clé API de Postmark
 ENV POSTMARK_API_KEY=${POSTMARK_API_KEY}
