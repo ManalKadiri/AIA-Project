@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Ignorer le fichier .env
+.env
+
+
 # C extensions
 *.so
 
