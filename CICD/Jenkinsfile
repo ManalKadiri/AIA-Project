@@ -82,7 +82,7 @@ APP_URI=${APP_URI}
         }
         failure {
             echo "Une erreur est survenue. Envoi d'un email d'alerte..."
-            dir('CICD/scripts') {
+            dir('CICD/mlflow') {
                 sh """
                 python3 send_email.py \
                     "Pipeline Jenkins Échoué" \
