@@ -18,24 +18,38 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 dir('mlflow') {
-                    sh 'docker build -t mlflow-image .'
+                    script {
+                        sh '''
+                        docker build -t mlflow-image .
+                        '''
+                    }
                 }
             }
         }
         stage('Run Training Script') {
             steps {
                 dir('mlflow') {
-                    sh """
-                    docker run --env-file .env -p 4000:4000 -v "$(pwd):/home/app" image-mlflow python train.py
-                    """
+                    script {
+                        sh '''
+                        docker run --env-file .env \
+                                   -p 4000:4000 \
+                                   -v "$(pwd):/home/app" \
+                                   mlflow-image python train.py
+                        '''
+                    }
                 }
             }
         }
         stage('Post-build Cleanup') {
             steps {
-                echo "Cleaning up..."
-                sh 'docker rmi mlflow-image || true'
+                echo "Nettoyage après le build..."
+                script {
+                    sh '''
+                    docker rmi mlflow-image || true
+                    '''
+                }
             }
         }
     }
 }
+
