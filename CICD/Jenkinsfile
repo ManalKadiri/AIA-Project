@@ -40,7 +40,7 @@ APP_URI=${APP_URI}
             steps {
                 dir('mlflow') {
                     sh """
-                    docker run --env-file .env -p 4000:4000 -v "\$(pwd):/home/app" mlflow-image python mlflow/train.py
+                    docker run --env-file .env -p 4000:4000 -v "\$(pwd):/home/app" mlflow-image python train.py
                     """
                 }
             }
