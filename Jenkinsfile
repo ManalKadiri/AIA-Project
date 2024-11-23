@@ -18,38 +18,40 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 dir('mlflow') {
-                    script {
-                        sh '''
-                        docker build -t mlflow-image .
-                        '''
-                    }
+                    sh 'docker build -t mlflow-image .'
+                }
+            }
+        }
+        stage('Generate .env File') {
+            steps {
+                script {
+                    // Créez dynamiquement le fichier .env dans le dossier mlflow
+                    writeFile file: 'mlflow/.env', text: """
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+BACKEND_STORE_URI=${BACKEND_STORE_URI}
+ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
+APP_URI=${APP_URI}
+"""
                 }
             }
         }
         stage('Run Training Script') {
             steps {
                 dir('mlflow') {
-                    script {
-                        sh '''
-                        docker run --env-file .env \
-                                   -p 4000:4000 \
-                                   -v "$(pwd):/home/app" \
-                                   mlflow-image python train.py
-                        '''
-                    }
+                    sh """
+                    docker run --env-file .env -p 4000:4000 -v "\$(pwd):/home/app" mlflow-image python train.py
+                    """
                 }
             }
         }
         stage('Post-build Cleanup') {
             steps {
-                echo "Nettoyage après le build..."
-                script {
-                    sh '''
-                    docker rmi mlflow-image || true
-                    '''
-                }
+                echo "Cleaning up..."
+                sh 'docker rmi mlflow-image || true'
             }
         }
     }
 }
+
 
