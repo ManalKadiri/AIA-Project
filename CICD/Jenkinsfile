@@ -23,6 +23,13 @@ pipeline {
                 }
             }
         }
+        stage('Install Python dependencies') {
+            steps {
+                dir('CICD/mlflow') {
+                    sh 'pip install requests pytest'
+                }
+            }
+        }
 
         stage('Generate .env File') {
             steps {
