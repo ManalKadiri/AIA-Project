@@ -7,6 +7,7 @@ pipeline {
         BACKEND_STORE_URI = credentials('backend-store-uri')
         ARTIFACT_STORE_URI = credentials('artifact-store-uri')
         APP_URI = credentials('app-uri')
+        POSTMARK_API_KEY = credentials('postmark-api-key') // Clé API Postmark
     }
     stages {
         stage('Checkout') {
@@ -15,13 +16,13 @@ pipeline {
                 checkout scm
             }
         }
-    stage('Build Docker Image') {
-        steps {
-            dir('CICD') {
-                sh 'docker build -t mlflow-image .'
+        stage('Build Docker Image') {
+            steps {
+                dir('CICD') {
+                    sh 'docker build -t mlflow-image .'
+                }
             }
         }
-    }
 
         stage('Generate .env File') {
             steps {
@@ -35,7 +36,7 @@ ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
 APP_URI=${APP_URI}
 """
                     }
-            // Vérifiez si le fichier .env est bien généré
+                    // Vérifiez si le fichier .env est bien généré
                     sh 'echo "Vérification du fichier .env :" && ls -la && cat .env'
                 }
             }
@@ -51,7 +52,6 @@ APP_URI=${APP_URI}
             }
         }
 
-        
         stage('Run Tests') {
             steps {
                 dir('CICD/mlflow') {
@@ -68,11 +68,26 @@ APP_URI=${APP_URI}
             }
         }
 
-        
         stage('Post-build Cleanup') {
             steps {
                 echo "Cleaning up..."
                 sh 'docker rmi mlflow-image || true'
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo "Pipeline terminé. Vérifiez l'état des tests et des étapes précédentes."
+        }
+        failure {
+            echo "Une erreur est survenue. Envoi d'un email d'alerte..."
+            dir('CICD/scripts') {
+                sh """
+                python3 send_email.py \
+                    "Pipeline Jenkins Échoué" \
+                    "Le pipeline Jenkins a échoué dans une des étapes. Veuillez vérifier les logs pour plus de détails."
+                """
             }
         }
     }
