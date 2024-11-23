@@ -36,15 +36,18 @@ APP_URI=${APP_URI}
                 }
             }
         }
+        
         stage('Run Training Script') {
             steps {
-                dir('mlflow') {
+                dir('CICD/mlflow') {
                     sh """
-                    docker run --env-file .env -p 4000:4000 -v "\$(pwd):/home/app" mlflow-image python train.py
+                    docker run --env-file .env -p 4000:4000 -v "\$(pwd):/home/app" mlflow-image python /home/app/train.py
                     """
                 }
             }
         }
+
+        
         stage('Run Tests') {
             steps {
                 dir('mlflow') {
