@@ -30,7 +30,7 @@ pipeline {
                     script {
                         sh """
                         echo "Installing Python dependencies..."
-                        pip install requests pytest || exit 1
+                        pip install requests pytest --break-system-packages
                         """
                     }
                 }
