@@ -96,7 +96,7 @@ APP_URI=${APP_URI}
 
         stage('Build API Docker Image') {
             steps {
-                dir('CICD/api') {
+                dir('CICD/API') {
                     echo "Building API Docker image..."
                     sh 'docker build -t fraud-detection-api .'
                 }
