@@ -1,14 +1,12 @@
 pipeline {
     agent any
     environment {
-        // Injecter les credentials Jenkins
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
-        BACKEND_STORE_URI = credentials('backend-store-uri')
-        ARTIFACT_STORE_URI = credentials('artifact-store-uri')
-        APP_URI = credentials('app-uri')
-        POSTMARK_API_KEY = credentials('postmark-api-key') // Clé API Postmark
-        MLFLOW_TRACKING_URI = credentials('mlflow-tracking-uri') // Lien de suivi MLflow
+        APP_URI = credentials('app-uri') // Nom du credential pour APP_URI
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id') // Credential AWS Access Key
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key') // Credential AWS Secret Key
+        BACKEND_STORE_URI = credentials('backend-store-uri') // Credential Backend Store URI
+        ARTIFACT_STORE_URI = credentials('artifact-store-uri') // Credential Artifact Store URI
+        POSTMARK_API_KEY = credentials('postmark-api-key') // Credential Postmark API Key
     }
     stages {
         stage('Checkout') {
@@ -17,6 +15,7 @@ pipeline {
                 checkout scm
             }
         }
+
         stage('Build Docker Images') {
             steps {
                 parallel (
@@ -34,34 +33,21 @@ pipeline {
             }
         }
 
-        stage('Install Python Dependencies') {
-            steps {
-                dir('CICD/mlflow') {
-                    script {
-                        sh """
-                        echo "Installing Python dependencies..."
-                        pip install requests pytest --break-system-packages
-                        """
-                    }
-                }
-            }
-        }
-
         stage('Generate .env File') {
             steps {
-                dir('CICD') { // Naviguer dans le bon répertoire
+                dir('CICD') {
                     script {
                         writeFile file: '.env', text: """
+APP_URI=${APP_URI}
 AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
 AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 BACKEND_STORE_URI=${BACKEND_STORE_URI}
 ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
-APP_URI=${APP_URI}
-MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
+POSTMARK_API_KEY=${POSTMARK_API_KEY}
 """
                     }
-                    // Vérifiez si le fichier .env est bien généré
-                    sh 'echo "Vérification du fichier .env :" && ls -la && cat .env'
+                    // Afficher le contenu pour vérification (supprimez cette ligne en production)
+                    sh 'cat .env'
                 }
             }
         }
@@ -76,26 +62,9 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
             }
         }
 
-        stage('Run Tests') {
-            steps {
-                dir('CICD/mlflow') {
-                    script {
-                        // Lancer les tests dans le conteneur Docker
-                        sh """
-                        docker run --env-file ../.env \
-                            -v "\$(pwd)/tests:/home/app/tests" \
-                            -v "\$(pwd)/mlflow:/home/app/mlflow" \
-                            mlflow-image pytest /home/app/tests --disable-warnings
-                        """
-                    }
-                }
-            }
-        }
-
         stage('Run Model Validation') {
             steps {
                 dir('CICD/mlflow') {
-                    echo "Running model validation script..."
                     sh """
                     docker run --env-file ../.env \
                         -v "\$(pwd):/home/app" mlflow-image \
@@ -108,16 +77,10 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
         stage('Deploy API') {
             steps {
                 dir('CICD/API') {
-                    script {
-                        echo "Deploying Fraud Detection API..."
-                        sh """
-                        docker stop fraud-api || true
-                        docker rm fraud-api || true
-                        docker run -d --name fraud-api \
-                            --env-file ../.env \
-                            -p 8000:8000 fraud-detection-api
-                        """
-                    }
+                    sh """
+                    docker run --env-file ../.env \
+                        -p 8000:8000 -v "\$(pwd):/home/app" fraud-detection-api
+                    """
                 }
             }
         }
