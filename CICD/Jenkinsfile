@@ -8,6 +8,7 @@ pipeline {
         ARTIFACT_STORE_URI = credentials('artifact-store-uri')
         APP_URI = credentials('app-uri')
         POSTMARK_API_KEY = credentials('postmark-api-key') // Clé API Postmark
+        MLFLOW_TRACKING_URI = credentials('mlflow-tracking-uri') // Lien de suivi MLflow
     }
     stages {
         stage('Checkout') {
@@ -16,11 +17,20 @@ pipeline {
                 checkout scm
             }
         }
-        stage('Build Docker Image') {
+        stage('Build Docker Images') {
             steps {
-                dir('CICD') {
-                    sh 'docker build -t mlflow-image .'
-                }
+                parallel (
+                    "Build MLflow Image": {
+                        dir('CICD/mlflow') {
+                            sh 'docker build -t mlflow-image .'
+                        }
+                    },
+                    "Build API Image": {
+                        dir('CICD/API') {
+                            sh 'docker build -t fraud-detection-api .'
+                        }
+                    }
+                )
             }
         }
 
@@ -39,7 +49,7 @@ pipeline {
 
         stage('Generate .env File') {
             steps {
-                dir('CICD/mlflow') { // Naviguer dans le bon répertoire
+                dir('CICD') { // Naviguer dans le bon répertoire
                     script {
                         writeFile file: '.env', text: """
 AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -47,6 +57,7 @@ AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 BACKEND_STORE_URI=${BACKEND_STORE_URI}
 ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
 APP_URI=${APP_URI}
+MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
 """
                     }
                     // Vérifiez si le fichier .env est bien généré
@@ -59,7 +70,7 @@ APP_URI=${APP_URI}
             steps {
                 dir('CICD/mlflow') {
                     sh """
-                    docker run --env-file .env -p 4000:4000 -v "\$(pwd):/home/app" mlflow-image python /home/app/train.py
+                    docker run --env-file ../.env -p 4000:4000 -v "\$(pwd):/home/app" mlflow-image python /home/app/train.py
                     """
                 }
             }
@@ -71,7 +82,7 @@ APP_URI=${APP_URI}
                     script {
                         // Lancer les tests dans le conteneur Docker
                         sh """
-                        docker run --env-file .env \
+                        docker run --env-file ../.env \
                             -v "\$(pwd)/tests:/home/app/tests" \
                             -v "\$(pwd)/mlflow:/home/app/mlflow" \
                             mlflow-image pytest /home/app/tests --disable-warnings
@@ -86,7 +97,7 @@ APP_URI=${APP_URI}
                 dir('CICD/mlflow') {
                     echo "Running model validation script..."
                     sh """
-                    docker run --env-file .env \
+                    docker run --env-file ../.env \
                         -v "\$(pwd):/home/app" mlflow-image \
                         python /home/app/validate_model.py
                     """
@@ -94,42 +105,26 @@ APP_URI=${APP_URI}
             }
         }
 
-        stage('Build API Docker Image') {
-            steps {
-                dir('CICD/API') {
-                    echo "Building API Docker image..."
-                    sh 'docker build -t fraud-detection-api .'
-                }
-            }
-        }
-
         stage('Deploy API') {
             steps {
-                script {
-                    echo "Deploying Fraud Detection API..."
-                    // Arrêter et supprimer le conteneur précédent s'il existe
-                    sh """
-                    docker stop fraud-api || true
-                    docker rm fraud-api || true
-                    """
-
-                    // Lancer l'API dans un nouveau conteneur Docker
-                    sh """
-                    docker run -d --name fraud-api \
-                        -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-                        -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-                        -e BACKEND_STORE_URI=${BACKEND_STORE_URI} \
-                        -e ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI} \
-                        -e APP_URI=${APP_URI} \
-                        -p 8000:8000 fraud-detection-api
-                    """
+                dir('CICD/API') {
+                    script {
+                        echo "Deploying Fraud Detection API..."
+                        sh """
+                        docker stop fraud-api || true
+                        docker rm fraud-api || true
+                        docker run -d --name fraud-api \
+                            --env-file ../.env \
+                            -p 8000:8000 fraud-detection-api
+                        """
+                    }
                 }
             }
         }
 
         stage('Post-build Cleanup') {
             steps {
-                echo "Cleaning up..."
+                echo "Cleaning up Docker images..."
                 sh 'docker rmi mlflow-image fraud-detection-api || true'
             }
         }
