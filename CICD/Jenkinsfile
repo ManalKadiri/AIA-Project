@@ -94,10 +94,43 @@ APP_URI=${APP_URI}
             }
         }
 
+        stage('Build API Docker Image') {
+            steps {
+                dir('CICD/api') {
+                    echo "Building API Docker image..."
+                    sh 'docker build -t fraud-detection-api .'
+                }
+            }
+        }
+
+        stage('Deploy API') {
+            steps {
+                script {
+                    echo "Deploying Fraud Detection API..."
+                    // Arrêter et supprimer le conteneur précédent s'il existe
+                    sh """
+                    docker stop fraud-api || true
+                    docker rm fraud-api || true
+                    """
+
+                    // Lancer l'API dans un nouveau conteneur Docker
+                    sh """
+                    docker run -d --name fraud-api \
+                        -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+                        -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+                        -e BACKEND_STORE_URI=${BACKEND_STORE_URI} \
+                        -e ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI} \
+                        -e APP_URI=${APP_URI} \
+                        -p 8000:8000 fraud-detection-api
+                    """
+                }
+            }
+        }
+
         stage('Post-build Cleanup') {
             steps {
                 echo "Cleaning up..."
-                sh 'docker rmi mlflow-image || true'
+                sh 'docker rmi mlflow-image fraud-detection-api || true'
             }
         }
     }
