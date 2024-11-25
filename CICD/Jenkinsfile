@@ -62,19 +62,7 @@ POSTMARK_API_KEY=${POSTMARK_API_KEY}
             }
         }
 
-        stage('Run Model Validation') {
-            steps {
-                dir('CICD/mlflow') {
-                    sh """
-                    docker run --env-file ../.env \
-                        -v "\$(pwd):/home/app" mlflow-image \
-                        python /home/app/validate_model.py
-                    """
-                }
-            }
-        }
-
-        stage('Rollback to Previous Model (if needed)') {
+        stage('Validate Model Performance') {
             steps {
                 dir('CICD/mlflow') {
                     script {
@@ -85,16 +73,27 @@ POSTMARK_API_KEY=${POSTMARK_API_KEY}
                         """, returnStatus: true)
 
                         if (validation_passed != 0) {
-                            echo "Validation failed. Rolling back to the previous model..."
-                            sh """
-                            docker run --env-file ../.env \
-                                -v "\$(pwd):/home/app" mlflow-image \
-                                python /home/app/rollback_model.py
-                            """
+                            echo "Validation failed. Model does not meet performance criteria."
+                            currentBuild.result = "UNSTABLE" // Marque la build comme instable
                         } else {
-                            echo "Validation passed. Current model is deployed."
+                            echo "Validation passed. Model meets performance criteria."
                         }
                     }
+                }
+            }
+        }
+
+        stage('Rollback to Previous Model (if needed)') {
+            when {
+                expression { currentBuild.result == "UNSTABLE" }
+            }
+            steps {
+                dir('CICD/mlflow') {
+                    sh """
+                    docker run --env-file ../.env \
+                        -v "\$(pwd):/home/app" mlflow-image \
+                        python /home/app/rollback_model.py
+                    """
                 }
             }
         }
