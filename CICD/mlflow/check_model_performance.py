@@ -8,7 +8,7 @@ load_dotenv()
 
 # Obtenir les variables nécessaires
 MLFLOW_TRACKING_URI = os.getenv("APP_URI")
-EXPERIMENT_NAME = os.getenv("MLFLOW_EXPERIMENT_NAME", "default")  # Par défaut "default"
+EXPERIMENT_NAME = os.getenv("MLFLOW_EXPERIMENT_NAME")  # Par défaut "default"
 PERFORMANCE_THRESHOLD = float(os.getenv("PERFORMANCE_THRESHOLD", 0.75))  # Par défaut 0.75
 
 # Vérifier si MLFLOW_TRACKING_URI est défini
