@@ -74,6 +74,31 @@ POSTMARK_API_KEY=${POSTMARK_API_KEY}
             }
         }
 
+        stage('Rollback to Previous Model (if needed)') {
+            steps {
+                dir('CICD/mlflow') {
+                    script {
+                        def validation_passed = sh(script: """
+                        docker run --env-file ../.env \
+                            -v "\$(pwd):/home/app" mlflow-image \
+                            python /home/app/check_model_performance.py
+                        """, returnStatus: true)
+
+                        if (validation_passed != 0) {
+                            echo "Validation failed. Rolling back to the previous model..."
+                            sh """
+                            docker run --env-file ../.env \
+                                -v "\$(pwd):/home/app" mlflow-image \
+                                python /home/app/rollback_model.py
+                            """
+                        } else {
+                            echo "Validation passed. Current model is deployed."
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Deploy API') {
             steps {
                 dir('CICD/API') {
