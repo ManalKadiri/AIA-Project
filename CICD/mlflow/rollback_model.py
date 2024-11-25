@@ -8,7 +8,7 @@ load_dotenv()
 
 # Obtenir les variables nécessaires
 MLFLOW_TRACKING_URI = os.getenv("APP_URI")
-EXPERIMENT_NAME = os.getenv("MLFLOW_EXPERIMENT_NAME")  # Par défaut "default"
+EXPERIMENT_NAME = os.getenv("MLFLOW_EXPERIMENT_NAME", "default")  # Par défaut "default"
 LOCAL_MODEL_DIR = os.getenv("LOCAL_MODEL_DIR", "/tmp/rollback_model")  # Dossier local pour le modèle
 
 # Vérifier si MLFLOW_TRACKING_URI est défini
@@ -26,7 +26,7 @@ if not experiment:
 
 runs = client.search_runs(
     [experiment.experiment_id],
-    filter_string="tags.action_required != 'retrain_model'",
+    filter_string="tags.action_required = 'stable'",  # Filtre pour trouver un modèle stable
     order_by=["start_time DESC"],
     max_results=1
 )
@@ -42,7 +42,8 @@ model_uri = f"runs:/{stable_run.info.run_id}/model"
 if os.path.exists(LOCAL_MODEL_DIR):
     shutil.rmtree(LOCAL_MODEL_DIR)
 
-mlflow.pyfunc.download_artifacts(model_uri=model_uri, dst_path=LOCAL_MODEL_DIR)
+# Utiliser mlflow.artifacts.download_artifacts
+mlflow.artifacts.download_artifacts(artifact_uri=model_uri, dst_path=LOCAL_MODEL_DIR)
 
 print(f"Retour au modèle stable effectué : run_id = {stable_run.info.run_id}")
 print(f"Modèle téléchargé dans : {LOCAL_MODEL_DIR}")
