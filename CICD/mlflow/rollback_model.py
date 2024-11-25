@@ -8,7 +8,7 @@ load_dotenv()
 
 # Obtenir les variables nécessaires
 MLFLOW_TRACKING_URI = os.getenv("APP_URI")
-EXPERIMENT_NAME = os.getenv("MLFLOW_EXPERIMENT_NAME", "default")  # Par défaut "default"
+EXPERIMENT_NAME = os.getenv("MLFLOW_EXPERIMENT_NAME")  # Par défaut "default"
 LOCAL_MODEL_DIR = os.getenv("LOCAL_MODEL_DIR", "/tmp/rollback_model")  # Dossier local pour le modèle
 
 # Vérifier si MLFLOW_TRACKING_URI est défini
