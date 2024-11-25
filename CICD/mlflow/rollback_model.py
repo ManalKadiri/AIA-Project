@@ -37,7 +37,8 @@ if not runs:
 stable_run = runs[0]
 
 # Télécharger les artefacts du modèle
-model_uri = f"runs:/{stable_run.info.run_id}/model"
+model_uri = f"runs:/{stable_run.info.run_id}/XGBoost"
+
 
 if os.path.exists(LOCAL_MODEL_DIR):
     shutil.rmtree(LOCAL_MODEL_DIR)
