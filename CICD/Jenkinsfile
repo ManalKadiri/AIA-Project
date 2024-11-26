@@ -132,7 +132,7 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
                 dir('CICD/API') {
                     sh """
                     docker run --env-file ../.env \
-                        -p 8000:8000 -v "\$(pwd):/home/app" fraud-detection-api
+                        -p 9000:8000 -v "\$(pwd):/home/app" fraud-detection-api
                     """
                 }
             }
