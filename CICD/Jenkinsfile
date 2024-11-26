@@ -71,7 +71,7 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
                         def test_result = sh(script: """
                         docker run --env-file ../.env \
                             -v "\$(pwd):/home/app" mlflow-image \
-                            pytest --maxfail=1 --disable-warnings -q test_data_preprocessing.py test_model_training.py
+                            pytest --maxfail=1 --disable-warnings -q /home/app/tests/test_data_preprocessing.py /home/app/tests/test_model_training.py
                         """, returnStatus: true)
 
                         if (test_result != 0) {
