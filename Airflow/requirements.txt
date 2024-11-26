@@ -1,0 +1,10 @@
+apache-airflow==2.6.3
+evidently
+pandas
+numpy
+boto3
+requests
+avro-python3
+scikit-learn
+xgboost
+mlflow
