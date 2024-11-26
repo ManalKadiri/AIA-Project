@@ -65,31 +65,30 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
         }
 
         stage('Run Tests') {
-    steps {
-        dir('CICD') {
-            script {
-                def test_result = sh(script: """
-                docker run --env-file .env \
-                    -v "\$(pwd)/tests:/home/app/tests" mlflow-image \
-                    pytest --maxfail=1 --disable-warnings -q /home/app/tests/test_data_preprocessing.py /home/app/tests/test_model_training.py
-                """, returnStatus: true)
+            steps {
+                dir('CICD') {
+                    script {
+                        def test_result = sh(script: """
+                        docker run --env-file .env \
+                            -v "\$(pwd)/tests:/home/app/tests" mlflow-image \
+                            pytest --maxfail=1 --disable-warnings -q /home/app/tests/test_data_preprocessing.py /home/app/tests/test_model_training.py
+                        """, returnStatus: true)
 
-                if (test_result != 0) {
-                    echo "Tests failed. Sending alert email..."
-                    sh """
-                    python3 mlflow/send_email.py \
-                        "Tests échoués" \
-                        "Un ou plusieurs tests ont échoué. Veuillez vérifier les logs Jenkins pour plus de détails."
-                    """
-                    error "Tests failed. Pipeline stopped."
-                } else {
-                    echo "All tests passed successfully."
+                        if (test_result != 0) {
+                            echo "Tests failed. Sending alert email..."
+                            sh """
+                            python3 mlflow/send_email.py \
+                                "Tests échoués" \
+                                "Un ou plusieurs tests ont échoué. Veuillez vérifier les logs Jenkins pour plus de détails."
+                            """
+                            error "Tests failed. Pipeline stopped."
+                        } else {
+                            echo "All tests passed successfully."
+                        }
+                    }
                 }
             }
         }
-    }
-}
-
 
         stage('Validate Model Performance') {
             steps {
@@ -131,21 +130,34 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
             steps {
                 dir('CICD/API') {
                     sh """
-                    docker run --env-file ../.env \
-                        -p 8280:8280 -v "\$(pwd):/home/app" fraud-detection-api
+                    docker run -d --env-file ../.env \
+                        -p 8280:8280 -v "\$(pwd):/home/app" \
+                        --name fraud-detection-api-container \
+                        fraud-detection-api
                     """
                 }
             }
         }
 
+        stage('Debugging Info') {
+            steps {
+                // Liste des conteneurs actifs
+                sh "docker ps -a"
+                // Afficher les logs du conteneur API
+                sh "docker logs fraud-detection-api-container"
+            }
+        }
+
         stage('Post-build Cleanup') {
             steps {
-                echo "Cleaning up Docker images..."
-                sh 'docker rmi mlflow-image fraud-detection-api || true'
+                echo "Cleaning up Docker images and containers..."
+                // Supprimer les images et conteneurs (désactivé pour debugging)
+                // sh 'docker rm -f fraud-detection-api-container || true'
+                // sh 'docker rmi mlflow-image fraud-detection-api || true'
             }
         }
     }
-    
+
     post {
         always {
             echo "Pipeline terminé. Vérifiez l'état des tests et des étapes précédentes."
