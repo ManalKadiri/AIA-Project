@@ -65,31 +65,30 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
         }
 
         stage('Run Tests') {
-    steps {
-        dir('CICD') {
-            script {
-                def test_result = sh(script: """
-                docker run --env-file .env \
-                    -v "\$(pwd)/tests:/home/app/tests" mlflow-image \
-                    pytest --maxfail=1 --disable-warnings -q /home/app/tests/test_data_preprocessing.py /home/app/tests/test_model_training.py
-                """, returnStatus: true)
+            steps {
+                dir('CICD') {
+                    script {
+                        def test_result = sh(script: """
+                        docker run --env-file .env \
+                            -v "\$(pwd)/tests:/home/app/tests" mlflow-image \
+                            pytest --maxfail=1 --disable-warnings -q /home/app/tests/test_data_preprocessing.py /home/app/tests/test_model_training.py
+                        """, returnStatus: true)
 
-                if (test_result != 0) {
-                    echo "Tests failed. Sending alert email..."
-                    sh """
-                    python3 mlflow/send_email.py \
-                        "Tests échoués" \
-                        "Un ou plusieurs tests ont échoué. Veuillez vérifier les logs Jenkins pour plus de détails."
-                    """
-                    error "Tests failed. Pipeline stopped."
-                } else {
-                    echo "All tests passed successfully."
+                        if (test_result != 0) {
+                            echo "Tests failed. Sending alert email..."
+                            sh """
+                            python3 mlflow/send_email.py \
+                                "Tests échoués" \
+                                "Un ou plusieurs tests ont échoué. Veuillez vérifier les logs Jenkins pour plus de détails."
+                            """
+                            error "Tests failed. Pipeline stopped."
+                        } else {
+                            echo "All tests passed successfully."
+                        }
+                    }
                 }
             }
         }
-    }
-}
-
 
         stage('Validate Model Performance') {
             steps {
@@ -139,8 +138,8 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
                 }
             }
         }
+    }
 
-    
     post {
         always {
             echo "Pipeline terminé. Vérifiez l'état des tests et des étapes précédentes."
