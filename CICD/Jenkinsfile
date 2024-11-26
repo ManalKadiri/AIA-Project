@@ -140,13 +140,6 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
             }
         }
 
-        stage('Post-build Cleanup') {
-            steps {
-                echo "Cleaning up Docker images..."
-                sh 'docker rmi mlflow-image fraud-detection-api || true'
-            }
-        }
-    }
     
     post {
         always {
