@@ -1,5 +1,6 @@
 FROM continuumio/miniconda3
 
+# Définir le répertoire de travail
 WORKDIR /home/app
 
 # Installer les dépendances nécessaires
@@ -12,9 +13,11 @@ RUN curl -fsSL https://get.deta.dev/cli.sh | sh
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && ./aws/install
 
-# Copier le fichier requirements.txt et installer les packages Python requis
-COPY requirements.txt /dependencies/requirements.txt
-RUN pip install -r /dependencies/requirements.txt
+# Copier tous les fichiers du contexte de construction dans l'image
+COPY . /home/app/
+
+# Installer les dépendances Python
+RUN pip install -r /home/app/requirements.txt
 
 # Définir une variable d'environnement non sensible
 ENV PORT=5000
