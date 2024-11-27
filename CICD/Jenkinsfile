@@ -1,12 +1,12 @@
 pipeline {
     agent any
     environment {
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id') // Credential AWS Access Key
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key') // Credential AWS Secret Key
-        BACKEND_STORE_URI = credentials('backend-store-uri') // Credential Backend Store URI
-        ARTIFACT_STORE_URI = credentials('artifact-store-uri') // Credential Artifact Store URI
-        POSTMARK_API_KEY = credentials('postmark-api-key') // Credential Postmark API Key
-       
+        // Charger les credentials pour S3 et MLflow
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+        BACKEND_STORE_URI = 'sqlite:///mlflow.db'
+        ARTIFACT_STORE_URI = 's3://bucketkadiri/Folder0/'
+        MLFLOW_TRACKING_URI = 'http://mlflow-server:4000' // Nom du conteneur utilisé pour le serveur MLflow
     }
     stages {
         stage('Checkout') {
@@ -16,53 +16,81 @@ pipeline {
             }
         }
 
+        stage('Setup Docker Network') {
+            steps {
+                // Créer un réseau Docker pour que les conteneurs puissent communiquer
+                sh 'docker network create mlflow-network || true'
+            }
+        }
+
+        stage('Build Docker Image for MLflow') {
+            steps {
+                dir('CICD/mlflow') {
+                    // Construire l'image Docker pour MLflow
+                    sh 'docker build -t mlflow-image .'
+                }
+            }
+        }
         stage('Generate .env File') {
             steps {
                 dir('CICD') {
                     script {
-                        // Générer le fichier .env avec les variables d'environnement
+                        // Générer un fichier .env avec les variables d'environnement
                         writeFile file: '.env', text: """
 AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
 AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 BACKEND_STORE_URI=${BACKEND_STORE_URI}
 ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
-POSTMARK_API_KEY=${POSTMARK_API_KEY}
+MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
 """
                     }
-                    // Vérifier le contenu du fichier .env (supprimer cette ligne en production)
+                    // Vérification du fichier .env (à supprimer en production)
                     sh 'cat .env'
                 }
             }
         }
 
-        stage('Build Docker Images') {
+        
+        stage('Start MLflow Server') {
             steps {
-                dir('CICD/mlflow') {
-                    sh 'docker build -t mlflow-image .'
+                dir('CICD') {
+                    script {
+                        // Démarrer le serveur MLflow dans un conteneur en utilisant le fichier .env
+                        sh """
+                        docker run -d --name mlflow-server \
+                            --network mlflow-network \
+                            --env-file .env \
+                            -p 4000:4000 \
+                            mlflow-image
+                        """
+                    }
                 }
             }
         }
 
+
         stage('Run Training Script') {
             steps {
                 dir('CICD/mlflow') {
-                    script {
-                        // Démarrer le conteneur pour exécuter le script train.py
-                        sh """
-                        docker run --rm --env-file ../.env \
-                            -v "\$(pwd):/home/app" \
-                            mlflow-image python /home/app/train.py
-                        """
-                    }
+                    // Exécuter le script train.py dans un autre conteneur connecté au réseau Docker
+                    sh """
+                    docker run --rm --network mlflow-network \
+                        --env-file ../.env \
+                        -v "\$(pwd):/home/app" \
+                        mlflow-image python /home/app/train.py
+                    """
                 }
             }
         }
     }
     post {
         always {
-            // Nettoyer les conteneurs créés pendant le pipeline
-            echo "Nettoyage des conteneurs Docker..."
-            sh 'docker container prune -f || true'
+            // Nettoyer les conteneurs et le réseau Docker après l'exécution
+            echo 'Nettoyage des conteneurs et du réseau Docker...'
+            sh """
+            docker rm -f mlflow-server || true
+            docker network rm mlflow-network || true
+            """
         }
         success {
             echo 'Pipeline exécutée avec succès !'
