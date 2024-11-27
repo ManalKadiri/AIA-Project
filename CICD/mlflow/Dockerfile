@@ -3,16 +3,22 @@ FROM continuumio/miniconda3
 # Définir le répertoire de travail
 WORKDIR /home/app
 
-# Copier tous les fichiers du contexte de construction dans le répertoire de travail
-COPY . /home/app/
+# Copier uniquement les fichiers nécessaires pour optimiser la construction
+COPY requirements.txt /home/app/requirements.txt
+COPY train.py /home/app/train.py
 
 # Installer les dépendances Python
-RUN pip install -r /home/app/requirements.txt
-RUN pip install fsspec s3fs
-RUN pip install psycopg2-binary
+RUN pip install --no-cache-dir -r /home/app/requirements.txt
+RUN pip install --no-cache-dir fsspec s3fs psycopg2-binary
 
-# Définir une variable d'environnement non sensible
-ENV PORT=5000
+# Installer MLflow et ses dépendances pour le tracking
+RUN pip install --no-cache-dir mlflow[extras] boto3
+
+# Configurer MLflow pour pointer vers votre serveur local existant
+ENV MLFLOW_TRACKING_URI=http://localhost:4000
+
+# Définir une variable d'environnement pour le port
+ENV PORT=4000
 
 # Lancer le script d'entraînement
 CMD ["python", "train.py"]
