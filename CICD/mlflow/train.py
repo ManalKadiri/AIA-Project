@@ -33,6 +33,7 @@ def download_from_s3(bucket_name, key, local_path):
     s3.download_file(bucket_name, key, local_path)
     print(f"Fichier téléchargé localement à : {local_path}")
 
+# Récupérer le dataset
 if not os.path.exists(local_dataset_path):
     download_from_s3(s3_bucket_name, s3_dataset_key, local_dataset_path)
 
@@ -87,8 +88,8 @@ models = {
                               scale_pos_weight=(Y_train.value_counts()[0] / Y_train.value_counts()[1]))
 }
 
-# Configuration MLflow pour usage local
-mlflow.set_tracking_uri("http://localhost:5001")
+# Configuration MLflow pour usage local avec port 4000
+mlflow.set_tracking_uri("http://localhost:4000")
 mlflow.set_experiment("mlflow-local")
 
 # Validation des modèles
