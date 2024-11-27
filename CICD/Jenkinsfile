@@ -1,7 +1,6 @@
 pipeline {
     agent any
     environment {
-        // Charger les credentials pour S3 et MLflow
         AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
         BACKEND_STORE_URI = 'sqlite:///mlflow.db'
@@ -11,14 +10,12 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Cloner le code source depuis GitHub
                 checkout scm
             }
         }
 
         stage('Setup Docker Network') {
             steps {
-                // Créer un réseau Docker pour que les conteneurs puissent communiquer
                 sh 'docker network create mlflow-network || true'
             }
         }
@@ -26,16 +23,15 @@ pipeline {
         stage('Build Docker Image for MLflow') {
             steps {
                 dir('CICD/mlflow') {
-                    // Construire l'image Docker pour MLflow
                     sh 'docker build -t mlflow-image .'
                 }
             }
         }
+
         stage('Generate .env File') {
             steps {
                 dir('CICD') {
                     script {
-                        // Générer un fichier .env avec les variables d'environnement
                         writeFile file: '.env', text: """
 AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
 AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
@@ -44,23 +40,20 @@ ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
 MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
 """
                     }
-                    // Vérification du fichier .env (à supprimer en production)
                     sh 'cat .env'
                 }
             }
         }
-        
+
         stage('Prepare Volume') {
             steps {
-                // Créer le répertoire tmp pour le montage
                 sh 'mkdir -p tmp'
             }
         }
-        
+
         stage('Start MLflow Server') {
             steps {
                 script {
-                    // Démarrer le serveur MLflow avec le montage du volume
                     sh """
                     docker run -d --name mlflow-server \
                         --network mlflow-network \
@@ -72,13 +65,10 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
                 }
             }
         }
-        }
-
 
         stage('Run Training Script') {
             steps {
                 dir('CICD/mlflow') {
-                    // Exécuter le script train.py dans un autre conteneur connecté au réseau Docker
                     sh """
                     docker run --rm --network mlflow-network \
                         --env-file ../.env \
@@ -91,7 +81,6 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
     }
     post {
         always {
-            // Nettoyer les conteneurs et le réseau Docker après l'exécution
             echo 'Nettoyage des conteneurs et du réseau Docker...'
             sh """
             docker rm -f mlflow-server || true
