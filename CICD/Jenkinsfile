@@ -1,10 +1,8 @@
 pipeline {
     agent any
     environment {
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id') // AWS pour le téléchargement depuis S3
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
-        BACKEND_STORE_URI = credentials('backend-store-uri')
-        ARTIFACT_STORE_URI = credentials('artifact-store-uri')
     }
     stages {
         stage('Cloner le dépôt GitHub') {
@@ -12,19 +10,24 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/ManalKadiri/AIA-Project.git'
             }
         }
-        stage('Entraîner le modèle avec MLflow') {
+        stage('Construire l’image Docker pour MLflow') {
             steps {
                 dir('CICD/mlflow') {
                     script {
                         // Construire l'image Docker pour MLflow
                         sh 'docker build -t mlflow-training .'
-
+                    }
+                }
+            }
+        }
+        stage('Entraîner le modèle avec MLflow') {
+            steps {
+                dir('CICD/mlflow') {
+                    script {
                         // Vérifier les variables d'environnement
                         sh '''
                         echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}"
                         echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"
-                        echo "BACKEND_STORE_URI=${BACKEND_STORE_URI}"
-                        echo "ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}"
                         '''
 
                         // Lancer le conteneur pour entraîner le modèle
@@ -32,8 +35,8 @@ pipeline {
                         docker run --rm \
                             -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
                             -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-                            -e BACKEND_STORE_URI=${BACKEND_STORE_URI} \
-                            -e ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI} \
+                            -v $(pwd)/artifacts:/home/app/artifacts \  # Montage du volume pour sauvegarder les artefacts localement
+                            -v $(pwd)/datasets:/home/app/datasets \   # Montage du volume pour télécharger les fichiers S3
                             mlflow-training python train.py
                         '''
                     }
