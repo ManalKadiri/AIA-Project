@@ -55,13 +55,25 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
 
         stage('Run Training Script') {
             steps {
-                dir('CICD/mlflow') { // Pas besoin d'ajouter "main"
+                dir('CICD/mlflow') {
+                    script {
+                        // Monter et vérifier les fichiers dans le conteneur
+                        sh """
+                        docker run --env-file ../.env -p 4000:4000 \
+                        -v "\$(pwd):/home/app" mlflow-image \
+                        ls -al /home/app
+                        """
+                    }
+                    // Lancer le script de formation
                     sh """
-                    docker run --env-file ../.env -p 4000:4000 -v "\$(pwd):/home/app" mlflow-image python /home/app/train.py
+                    docker run --env-file ../.env -p 4000:4000 \
+                        -v "\$(pwd):/home/app" mlflow-image \
+                        python /home/app/train.py
                     """
                 }
             }
         }
+
 
         stage('Run Tests') {
             steps {
