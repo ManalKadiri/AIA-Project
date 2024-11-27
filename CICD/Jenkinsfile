@@ -10,18 +10,27 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/ManalKadiri/AIA-Project.git'
             }
         }
+        stage('Construire l’image Docker pour le serveur MLflow') {
+            steps {
+                dir('CICD/mlflow') {
+                    script {
+                        // Construire l'image Docker pour le serveur MLflow
+                        sh 'docker build -t custom-mlflow-server -f Dockerfile .'
+                    }
+                }
+            }
+        }
         stage('Démarrer le serveur MLflow') {
             steps {
                 script {
+                    // Démarrer un conteneur MLflow comme serveur de suivi
                     sh '''
                     docker run -d --name mlflow-server \
                         -p 5000:5000 \
                         -v $(pwd)/artifacts:/home/app/artifacts \
                         -v $(pwd)/mlruns:/home/app/mlruns \
                         -v $(pwd)/mlflow.db:/home/app/mlflow.db \
-                        mlflow/mlflow:2.7.1 server \
-                        --backend-store-uri sqlite:///home/app/mlflow.db \
-                        --default-artifact-root /home/app/artifacts
+                        custom-mlflow-server
                     '''
                 }
             }
@@ -30,6 +39,7 @@ pipeline {
             steps {
                 dir('CICD/mlflow') {
                     script {
+                        // Construire l'image Docker pour le script d'entraînement
                         sh 'docker build -t mlflow-training .'
                     }
                 }
@@ -55,6 +65,7 @@ pipeline {
     post {
         always {
             script {
+                // Nettoyer le conteneur MLflow
                 sh 'docker rm -f mlflow-server || true'
             }
         }
