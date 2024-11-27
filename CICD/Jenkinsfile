@@ -47,7 +47,8 @@ BACKEND_STORE_URI=${BACKEND_STORE_URI}
 ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
 MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
 """
-                        sh 'ls -la && cat .env' // Vérification en développement
+                        // Ajout de diagnostics pour confirmer la création correcte du fichier .env
+                        sh 'ls -la .env && cat .env' 
                         sh 'chmod 644 .env'
                     }
                 }
@@ -83,7 +84,7 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
                     sh """
                     docker run -d --name mlflow-server \
                         --network mlflow-network \
-                        --env-file CICD/.env \
+                        --env-file ../CICD/.env \
                         -v "\$(pwd)/tmp:/home/app/tmp" \
                         -p 4000:4000 \
                         mlflow-image
@@ -96,10 +97,10 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
             steps {
                 dir('CICD/mlflow') {
                     script {
-                        // Vérifiez la présence du fichier train.py
+                        // Diagnostic supplémentaire pour confirmer le montage correct
                         sh 'ls -la train.py'
 
-                        // Listez les fichiers dans le conteneur pour confirmer le montage
+                        // Confirmez la présence des fichiers montés dans le conteneur Docker
                         sh """
                         docker run --rm --network mlflow-network \
                             --env-file ../.env \
@@ -107,7 +108,7 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
                             mlflow-image ls -la /home/app
                         """
 
-                        // Lancez le script d'entraînement
+                        // Exécution du script d'entraînement
                         sh """
                         docker run --rm --network mlflow-network \
                             --env-file ../.env \
@@ -124,7 +125,7 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
         always {
             echo 'Nettoyage des conteneurs et du réseau Docker...'
             sh """
-            docker network disconnect -f mlflow-network \$(docker ps -q --filter network=mlflow-network) || true
+            docker ps -q --filter network=mlflow-network | xargs -r docker network disconnect -f mlflow-network || true
             docker rm -f mlflow-server || true
             docker network rm mlflow-network || true
             """
