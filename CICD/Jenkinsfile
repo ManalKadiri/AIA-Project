@@ -10,17 +10,33 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/ManalKadiri/AIA-Project.git',
+                        credentialsId: 'your-credentials-id'
+                    ]]
+                ])
             }
         }
 
         stage('Setup Docker Network') {
             steps {
-                sh 'docker network rm mlflow-network || true && docker network create mlflow-network'
+                script {
+                    sh """
+                    docker network disconnect -f mlflow-network $(docker ps -q --filter network=mlflow-network) || true
+                    docker network rm mlflow-network || true
+                    docker network create mlflow-network
+                    """
+                }
             }
         }
 
         stage('Generate .env File') {
+            when {
+                expression { currentBuild.result == null }
+            }
             steps {
                 dir('CICD') {
                     script {
@@ -31,7 +47,7 @@ BACKEND_STORE_URI=${BACKEND_STORE_URI}
 ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
 MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
 """
-                        sh 'ls -la && cat .env' // Vérification en développement
+                        sh 'ls -la && cat .env' // Vérification pour le développement
                         sh 'chmod 644 .env'
                     }
                 }
@@ -39,6 +55,9 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
         }
 
         stage('Build Docker Image for MLflow') {
+            when {
+                expression { currentBuild.result == null }
+            }
             steps {
                 dir('CICD/mlflow') {
                     sh 'docker build -t mlflow-image .'
@@ -47,12 +66,18 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
         }
 
         stage('Prepare Volume') {
+            when {
+                expression { currentBuild.result == null }
+            }
             steps {
                 sh 'mkdir -p tmp'
             }
         }
 
         stage('Start MLflow Server') {
+            when {
+                expression { currentBuild.result == null }
+            }
             steps {
                 script {
                     sh """
@@ -68,10 +93,13 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
         }
 
         stage('Run Training Script') {
+            when {
+                expression { currentBuild.result == null }
+            }
             steps {
                 dir('CICD/mlflow') {
                     script {
-                        sh 'ls -la train.py' // Vérification
+                        sh 'ls -la train.py'
                         sh """
                         docker run --rm --network mlflow-network \
                             --env-file ../.env \
@@ -87,6 +115,7 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
         always {
             echo 'Nettoyage des conteneurs et du réseau Docker...'
             sh """
+            docker network disconnect -f mlflow-network $(docker ps -q --filter network=mlflow-network) || true
             docker rm -f mlflow-server || true
             docker network rm mlflow-network || true
             """
