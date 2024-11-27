@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id') // Identifiants AWS sécurisés dans Jenkins
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
     }
     stages {
@@ -16,6 +16,7 @@ pipeline {
                     sh '''
                     mkdir -p $(pwd)/artifacts
                     mkdir -p $(pwd)/mlruns
+                    mkdir -p $(pwd)/datasets
                     touch $(pwd)/mlflow.db
                     '''
                 }
@@ -25,7 +26,6 @@ pipeline {
             steps {
                 dir('CICD/mlflow') {
                     script {
-                        // Construire l'image Docker pour le serveur MLflow
                         sh 'docker build -t custom-mlflow-server -f Dockerfile .'
                     }
                 }
@@ -34,13 +34,13 @@ pipeline {
         stage('Démarrer le serveur MLflow') {
             steps {
                 script {
-                    // Nettoyer les anciens conteneurs MLflow
+                    // Arrêter les conteneurs existants
                     sh 'docker rm -f mlflow-server || true'
 
-                    // Démarrer un conteneur MLflow comme serveur de suivi
+                    // Lancer le serveur MLflow
                     sh '''
                     docker run -d --name mlflow-server \
-                        -p 5001:5000 \
+                        -p 4000:4000 \
                         -v $(pwd)/artifacts:/home/app/artifacts \
                         -v $(pwd)/mlruns:/home/app/mlruns \
                         -v $(pwd)/mlflow.db:/home/app/mlflow.db \
@@ -53,7 +53,6 @@ pipeline {
             steps {
                 dir('CICD/mlflow') {
                     script {
-                        // Construire l'image Docker pour le script d'entraînement
                         sh 'docker build -t mlflow-training .'
                     }
                 }
@@ -79,7 +78,7 @@ pipeline {
     post {
         always {
             script {
-                // Nettoyer le conteneur MLflow
+                // Nettoyer les conteneurs restants
                 sh 'docker rm -f mlflow-server || true'
             }
         }
@@ -87,7 +86,7 @@ pipeline {
             echo 'Pipeline exécuté avec succès !'
         }
         failure {
-            echo 'Une erreur est survenue pendant le pipeline.'
+            echo 'Une erreur est survenue pendant l’exécution du pipeline.'
         }
     }
 }
