@@ -88,7 +88,7 @@ models = {
 }
 
 # Configuration MLflow pour usage local
-mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_tracking_uri("http://localhost:5001")
 mlflow.set_experiment("mlflow-local")
 
 # Validation des modèles
