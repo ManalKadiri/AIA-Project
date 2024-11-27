@@ -21,12 +21,12 @@ pipeline {
             steps {
                 parallel (
                     "Build MLflow Image": {
-                        dir('CICD/mlflow') { // Pas besoin d'ajouter "main"
+                        dir('CICD/mlflow') {
                             sh 'docker build -t mlflow-image .'
                         }
                     },
                     "Build API Image": {
-                        dir('CICD/API') { // Pas besoin d'ajouter "main"
+                        dir('CICD/API') {
                             sh 'docker build -t fraud-detection-api .'
                         }
                     }
@@ -36,7 +36,7 @@ pipeline {
 
         stage('Generate .env File') {
             steps {
-                dir('CICD') { // Pas besoin d'ajouter "main"
+                dir('CICD') {
                     script {
                         writeFile file: '.env', text: """
 APP_URI=${APP_URI}
@@ -58,39 +58,32 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
                 dir('CICD/mlflow') {
                     script {
                         // Monter et vérifier les fichiers dans le conteneur
-                        sh """
+                        sh '''
                         docker run --env-file ../.env -p 4000:4000 -v "$(pwd):/home/app" mlflow-image python train.py
-                        """
+                        '''
                     }
-                    // Lancer le script de formation
-                    sh """
-                    docker run --env-file ../.env -p 4000:4000 \
-                        -v "\$(pwd):/home/app" mlflow-image \
-                        python /home/app/train.py
-                    """
                 }
             }
         }
 
-
         stage('Run Tests') {
             steps {
-                dir('CICD/tests') { // Les tests sont dans un sous-dossier spécifique
+                dir('CICD/tests') {
                     script {
-                        def test_result = sh(script: """
+                        def test_result = sh(script: '''
                         docker run --env-file ../.env \
-                            -v "\$(pwd):/home/app/tests" mlflow-image \
+                            -v "$(pwd):/home/app/tests" mlflow-image \
                             pytest --maxfail=1 --disable-warnings -q /home/app/tests
-                        """, returnStatus: true)
+                        ''', returnStatus: true)
 
                         if (test_result != 0) {
                             echo "Tests failed. Sending alert email..."
                             dir('CICD/mlflow') {
-                                sh """
+                                sh '''
                                 python send_email.py \
                                     "Tests échoués" \
                                     "Un ou plusieurs tests ont échoué. Veuillez vérifier les logs Jenkins."
-                                """
+                                '''
                             }
                             error "Tests failed. Pipeline stopped."
                         } else {
@@ -103,13 +96,13 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
 
         stage('Deploy API') {
             steps {
-                dir('CICD/API') { // Pas besoin d'ajouter "main"
-                    sh """
+                dir('CICD/API') {
+                    sh '''
                     docker run --network host -d \
-                        -v "\$(pwd):/home/app" \
+                        -v "$(pwd):/home/app" \
                         fraud-detection-api \
                         python /home/app/api.py
-                    """
+                    '''
                 }
             }
         }
@@ -122,11 +115,11 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
         failure {
             echo "Une erreur est survenue. Envoi d'un email d'alerte..."
             dir('CICD/mlflow') {
-                sh """
+                sh '''
                 python send_email.py \
                     "Pipeline Jenkins Échoué" \
                     "Le pipeline Jenkins a échoué dans une des étapes. Veuillez vérifier les logs pour plus de détails."
-                """
+                '''
             }
         }
     }
