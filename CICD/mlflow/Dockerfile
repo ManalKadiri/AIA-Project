@@ -19,6 +19,7 @@ COPY . /home/app/
 # Installer les dépendances Python
 RUN pip install -r /home/app/requirements.txt
 RUN pip install fsspec s3fs
+RUN pip install psycopg2-binary
 
 
 # Définir une variable d'environnement non sensible
