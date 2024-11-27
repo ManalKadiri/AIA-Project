@@ -88,8 +88,8 @@ models = {
                               scale_pos_weight=(Y_train.value_counts()[0] / Y_train.value_counts()[1]))
 }
 
-# Configuration MLflow pour usage local avec port 5000
-mlflow.set_tracking_uri("http://localhost:5000")
+# Configuration MLflow pour usage local avec port 9000
+mlflow.set_tracking_uri("http://localhost:9000")
 mlflow.set_experiment("mlflow-local")
 
 # Validation des modèles
