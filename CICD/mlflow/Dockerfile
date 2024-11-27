@@ -1,35 +1,23 @@
-# Utiliser une image de base basée sur Miniconda
-FROM continuumio/miniconda3:latest
+FROM continuumio/miniconda3
 
-# Définir le répertoire de travail
 WORKDIR /home/app
 
-# Installer les dépendances système nécessaires
-RUN apt-get update && apt-get install -y \
-    git \
-    nano \
-    unzip \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Installer les dépendances nécessaires
+RUN apt-get update && apt-get install -y nano unzip curl
 
 # Installer Deta CLI
 RUN curl -fsSL https://get.deta.dev/cli.sh | sh
 
 # Installer AWS CLI
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-    unzip awscliv2.zip && ./aws/install && \
-    rm -rf awscliv2.zip aws/
+    unzip awscliv2.zip && ./aws/install
 
-# Cloner le dépôt GitHub directement dans le conteneur
-ARG REPO_URL="https://github.com/username/project-name.git"
-RUN git clone $REPO_URL /home/app
+# Copier le fichier requirements.txt et installer les packages Python requis
+COPY requirements.txt /dependencies/requirements.txt
+RUN pip install -r /dependencies/requirements.txt
 
-# Installer les dépendances Python
-RUN pip install --no-cache-dir -r /home/app/CICD/mlflow/requirements.txt
-RUN pip install pytest requests
-
-# Définir une variable d'environnement non sensible pour le port
+# Définir une variable d'environnement non sensible
 ENV PORT=5000
 
 # Lancer le serveur MLflow avec les variables d'environnement sensibles injectées au runtime
-CMD ["mlflow", "server", "--host", "0.0.0.0", "--backend-store-uri", "${BACKEND_STORE_URI}", "--default-artifact-root", "${ARTIFACT_STORE_URI}", "-p", "${PORT}"]
+CMD mlflow server --host 0.0.0.0 --backend-store-uri "${BACKEND_STORE_URI}" --default-artifact-root "${ARTIFACT_STORE_URI}" -p ${PORT}
