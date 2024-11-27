@@ -15,10 +15,10 @@ RUN pip install --no-cache-dir fsspec s3fs psycopg2-binary
 RUN pip install --no-cache-dir mlflow[extras] boto3
 
 # Configurer MLflow pour pointer vers votre serveur local existant
-ENV MLFLOW_TRACKING_URI=http://localhost:9000
+ENV MLFLOW_TRACKING_URI=http://localhost:4000
 
 # Définir une variable d'environnement pour le port
-ENV PORT=9000
+ENV PORT=4000
 
 # Lancer le script d'entraînement
 CMD ["python", "train.py"]
