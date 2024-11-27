@@ -12,8 +12,7 @@ COPY . /home/app
 WORKDIR /home/app
 
 # Exposer le port utilisé par FastAPI
-EXPOSE 8005
+EXPOSE 8000
 
 # Commande pour démarrer l'application FastAPI
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8005"]
-
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
