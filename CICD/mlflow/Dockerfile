@@ -21,6 +21,9 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 
 # Copier le fichier requirements.txt dans le conteneur
 COPY requirements.txt /dependencies/requirements.txt
+COPY . /home/app
+WORKDIR /home/app
+
 
 # Installer les packages Python requis
 RUN pip install --no-cache-dir -r /dependencies/requirements.txt
