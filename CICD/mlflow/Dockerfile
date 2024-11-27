@@ -15,13 +15,16 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Préparer les répertoires pour les artefacts et les fichiers temporaires
-RUN mkdir -p /home/app/artifacts /home/app/tmp
+RUN mkdir -p /home/app/artifacts /home/app/tmp /home/app/mlruns
 
 # Copier tous les fichiers nécessaires (scripts Python, configurations, etc.)
 COPY . .
 
 # Exposer le port si un serveur est exécuté
 EXPOSE 4000
+
+# Ajouter des vérifications pour le contexte d'exécution
+RUN echo "Vérification du répertoire courant et des fichiers présents :" && ls -la
 
 # Commande par défaut pour exécuter un serveur MLflow ou autre
 CMD ["mlflow", "server", "--backend-store-uri", "sqlite:///mlflow.db", "--default-artifact-root", "/home/app/artifacts", "--host", "0.0.0.0", "--port", "4000"]
