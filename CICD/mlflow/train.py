@@ -1,5 +1,6 @@
 import os
 import pickle
+import boto3
 import pandas as pd
 import numpy as np
 import mlflow
@@ -14,13 +15,29 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 
-# Configuration des chemins
-output_dir = "/tmp"
+# Configuration des chemins et S3
+output_dir = "./artifacts"
 preprocessor_path = os.path.join(output_dir, "preprocessor.pkl")
+local_dataset_path = "./datasets/fraudTest.csv"
+s3_bucket_name = "bucketkadiri"
+s3_dataset_key = "datasets/fraudTest.csv"
+
+# Téléchargement du fichier CSV depuis S3
+def download_from_s3(bucket_name, key, local_path):
+    print(f"Téléchargement du fichier depuis S3 : s3://{bucket_name}/{key}")
+    s3 = boto3.client("s3", 
+                      aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                      aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"))
+    if not os.path.exists(os.path.dirname(local_path)):
+        os.makedirs(os.path.dirname(local_path))
+    s3.download_file(bucket_name, key, local_path)
+    print(f"Fichier téléchargé localement à : {local_path}")
+
+if not os.path.exists(local_dataset_path):
+    download_from_s3(s3_bucket_name, s3_dataset_key, local_dataset_path)
 
 # Charger le dataset
-LOCAL_PATH = "s3://bucketkadiri/datasets/fraudTest.csv"  # Assurez-vous que le fichier est téléchargé
-df = pd.read_csv(LOCAL_PATH)
+df = pd.read_csv(local_dataset_path)
 
 # Prétraitement des données
 df['gender'] = df['gender'].apply(lambda x: 1 if x == 'F' else 0)  # Convertir `gender` en 1 (F) ou 0 (M)
@@ -70,9 +87,9 @@ models = {
                               scale_pos_weight=(Y_train.value_counts()[0] / Y_train.value_counts()[1]))
 }
 
-# Configuration MLflow
-mlflow.set_tracking_uri(os.getenv("BACKEND_STORE_URI", "http://localhost:5000"))
-mlflow.set_experiment("mlflow-AIA")
+# Configuration MLflow pour usage local
+mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_experiment("mlflow-local")
 
 # Validation des modèles
 for model_name, model in models.items():
