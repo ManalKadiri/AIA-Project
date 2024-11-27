@@ -89,7 +89,7 @@ models = {
 }
 
 # Configuration MLflow pour usage local avec port 4000
-mlflow.set_tracking_uri("http://localhost:4000")
+mlflow.set_tracking_uri("http://mlflow-server:4000")
 mlflow.set_experiment("mlflow-local")
 
 # Validation des modèles
