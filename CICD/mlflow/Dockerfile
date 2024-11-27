@@ -1,62 +1,35 @@
-pipeline {
-    agent any
-    environment {
-        APP_URI = credentials('app-uri') // Nom du credential pour APP_URI
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id') // Credential AWS Access Key
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key') // Credential AWS Secret Key
-        BACKEND_STORE_URI = credentials('backend-store-uri') // Credential Backend Store URI
-        ARTIFACT_STORE_URI = credentials('artifact-store-uri') // Credential Artifact Store URI
-        POSTMARK_API_KEY = credentials('postmark-api-key') // Credential Postmark API Key
-        MLFLOW_EXPERIMENT_NAME = credentials('mlflow-experiment-name') // Credential pour le nom de l'expérience
-    }
-    stages {
-        stage('Checkout') {
-            steps {
-                // Jenkins ne gère que l'accès GitHub ici
-                checkout scm
-            }
-        }
+# Utiliser une image de base basée sur Miniconda
+FROM continuumio/miniconda3:latest
 
-        stage('Build Docker Image') {
-            steps {
-                dir('CICD/mlflow') {
-                    script {
-                        sh """
-                        docker build -t mlflow-image --build-arg REPO_URL=https://github.com/username/project-name.git .
-                        """
-                    }
-                }
-            }
-        }
+# Définir le répertoire de travail
+WORKDIR /home/app
 
-        stage('Run Training Script') {
-            steps {
-                script {
-                    sh """
-                    docker run --env-file CICD/.env -p 4000:4000 mlflow-image python /home/app/train.py
-                    """
-                }
-            }
-        }
+# Installer les dépendances système nécessaires
+RUN apt-get update && apt-get install -y \
+    git \
+    nano \
+    unzip \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-        stage('Run Tests') {
-            steps {
-                script {
-                    def test_result = sh(script: """
-                    docker run --env-file CICD/.env \
-                        mlflow-image \
-                        pytest --maxfail=1 --disable-warnings -q /home/app/tests
-                    """, returnStatus: true)
+# Installer Deta CLI
+RUN curl -fsSL https://get.deta.dev/cli.sh | sh
 
-                    if (test_result != 0) {
-                        echo "Tests failed. Sending alert email..."
-                        sh """
-                        docker run --env-file CICD/.env \
-                            mlflow-image \
-                            python /home/app/send_email.py "Tests Failed" "Les tests ont échoué. Vérifiez les logs Jenkins."
-                        """
-                        error "Tests failed. Pipeline stopped."
-                    } else {
-                        echo "All tests passed successfully."
-                    }
-                }
+# Installer AWS CLI
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && ./aws/install && \
+    rm -rf awscliv2.zip aws/
+
+# Cloner le dépôt GitHub directement dans le conteneur
+ARG REPO_URL="https://github.com/username/project-name.git"
+RUN git clone $REPO_URL /home/app
+
+# Installer les dépendances Python
+RUN pip install --no-cache-dir -r /home/app/CICD/mlflow/requirements.txt
+RUN pip install pytest requests
+
+# Définir une variable d'environnement non sensible pour le port
+ENV PORT=5000
+
+# Lancer le serveur MLflow avec les variables d'environnement sensibles injectées au runtime
+CMD ["mlflow", "server", "--host", "0.0.0.0", "--backend-store-uri", "${BACKEND_STORE_URI}", "--default-artifact-root", "${ARTIFACT_STORE_URI}", "-p", "${PORT}"]
