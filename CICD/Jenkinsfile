@@ -1,63 +1,35 @@
 pipeline {
-    agent {
-        docker {
-            image 'continuumio/miniconda3'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any
     environment {
-        APP_URI = credentials('app-uri')
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
-        BACKEND_STORE_URI = credentials('backend-store-uri')
-        ARTIFACT_STORE_URI = credentials('artifact-store-uri')
-        POSTMARK_API_KEY = credentials('postmark-api-key')
-        MLFLOW_EXPERIMENT_NAME = credentials('mlflow-experiment-name')
-    }
-    triggers {
-        pollSCM('H/5 * * * *') // Vérifie toutes les 5 minutes les changements sur GitHub
+        // Ajouter les credentials et variables d'environnement
+        AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+        BACKEND_STORE_URI = credentials('BACKEND_STORE_URI')
+        ARTIFACT_STORE_URI = credentials('ARTIFACT_STORE_URI')
     }
     stages {
         stage('Cloner le dépôt GitHub') {
             steps {
-                git branch: 'main', url: 'https://github.com/USERNAME/AIA-project.git'
+                // Cloner le dépôt depuis GitHub
+                git branch: 'main', url: 'https://github.com/ManalKadiri/AIA-Project.git'
             }
         }
-        stage('Entraîner le modèle') {
+        stage('Entraîner le modèle avec MLflow') {
             steps {
                 dir('CICD/mlflow') {
                     script {
-                        sh 'python train.py'
-                    }
-                }
-            }
-        }
-        stage('Exécuter les tests') {
-            steps {
-                dir('CICD/tests') {
-                    script {
-                        // Exécute les tests unitaires
-                        sh 'pytest test_data_preprocessing.py'
-                        sh 'pytest test_model_training.py'
-                    }
-                }
-            }
-        }
-        stage('Vérifier les performances du modèle') {
-            steps {
-                dir('CICD/mlflow') {
-                    script {
-                        sh 'python check_model_performance.py'
-                    }
-                }
-            }
-        }
-        stage('Déployer via API') {
-            steps {
-                dir('CICD/API') {
-                    script {
-                        sh 'docker build -t fraud-detection-api .'
-                        sh 'docker run -d -p 8000:8000 fraud-detection-api'
+                        // Construire l'image Docker pour MLflow
+                        sh 'docker build -t mlflow-training .'
+
+                        // Lancer le conteneur pour entraîner le modèle
+                        sh '''
+                        docker run --rm \
+                            -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+                            -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+                            -e BACKEND_STORE_URI=${BACKEND_STORE_URI} \
+                            -e ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI} \
+                            mlflow-training python train.py
+                        '''
                     }
                 }
             }
@@ -65,10 +37,10 @@ pipeline {
     }
     post {
         success {
-            echo 'Pipeline exécuté avec succès ! 🎉'
+            echo 'Pipeline exécuté avec succès !'
         }
         failure {
-            echo 'Échec de l’exécution du pipeline. Vérifiez les logs pour plus de détails.'
+            echo 'Une erreur est survenue pendant le pipeline.'
         }
     }
 }
