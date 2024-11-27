@@ -40,7 +40,7 @@ pipeline {
                     // Démarrer un conteneur MLflow comme serveur de suivi
                     sh '''
                     docker run -d --name mlflow-server \
-                        -p 5000:5000 \
+                        -p 5001:5000 \
                         -v $(pwd)/artifacts:/home/app/artifacts \
                         -v $(pwd)/mlruns:/home/app/mlruns \
                         -v $(pwd)/mlflow.db:/home/app/mlflow.db \
