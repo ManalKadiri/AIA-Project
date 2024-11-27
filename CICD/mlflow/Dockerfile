@@ -1,24 +1,22 @@
-FROM continuumio/miniconda3
+# Dockerfile pour le serveur MLflow ET l'entraînement du modèle
+FROM python:3.9-slim
 
-# Définir le répertoire de travail
 WORKDIR /home/app
 
-# Copier uniquement les fichiers nécessaires pour optimiser la construction
-COPY requirements.txt /home/app/requirements.txt
-COPY train.py /home/app/train.py
+# Installer les dépendances
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Installer les dépendances Python
-RUN pip install --no-cache-dir -r /home/app/requirements.txt
-RUN pip install --no-cache-dir fsspec s3fs psycopg2-binary
+# Copier tous les fichiers nécessaires (scripts Python, fichiers de config, etc.)
+COPY . .
 
-# Installer MLflow et ses dépendances pour le tracking
-RUN pip install --no-cache-dir mlflow[extras] boto3
+# Exposer le port du serveur MLflow
+EXPOSE 4000
 
-# Configurer MLflow pour pointer vers votre serveur local existant
-ENV MLFLOW_TRACKING_URI=http://localhost:4000
-
-# Définir une variable d'environnement pour le port
-ENV PORT=4000
-
-# Lancer le script d'entraînement
-CMD ["python", "train.py"]
+# Utiliser un argument pour déterminer quelle commande exécuter
+ARG SERVICE="training"
+CMD if [ "$SERVICE" = "server" ]; then \
+        mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./artifacts --host 0.0.0.0 --port 4000; \
+    else \
+        python train.py; \
+    fi
