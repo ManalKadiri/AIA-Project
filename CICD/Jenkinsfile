@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id') // Identifiants AWS sécurisés dans Jenkins
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
     }
     stages {
@@ -22,11 +22,11 @@ pipeline {
                 }
             }
         }
-        stage('Construire l’image Docker pour le serveur MLflow') {
+        stage('Construire l’image Docker générique') {
             steps {
                 dir('CICD/mlflow') {
                     script {
-                        sh 'docker build -t custom-mlflow-server -f Dockerfile .'
+                        sh 'docker build -t mlflow-generic .'
                     }
                 }
             }
@@ -37,25 +37,16 @@ pipeline {
                     // Arrêter les conteneurs existants
                     sh 'docker rm -f mlflow-server || true'
 
-                    // Lancer le serveur MLflow sur le réseau personnalisé
+                    // Lancer le serveur MLflow
                     sh '''
                     docker run -d --name mlflow-server --network mlflow-network \
                         -p 4000:4000 \
                         -v $(pwd)/artifacts:/home/app/artifacts \
                         -v $(pwd)/mlruns:/home/app/mlruns \
                         -v $(pwd)/mlflow.db:/home/app/mlflow.db \
-                        custom-mlflow-server
+                        -e SERVICE=server \
+                        mlflow-generic
                     '''
-                }
-            }
-        }
-
-        stage('Construire l’image Docker pour l’entraînement') {
-            steps {
-                dir('CICD/mlflow') {
-                    script {
-                        sh 'docker build -t mlflow-training .'
-                    }
                 }
             }
         }
@@ -69,13 +60,12 @@ pipeline {
                             -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
                             -v $(pwd)/artifacts:/home/app/artifacts \
                             -v $(pwd)/datasets:/home/app/datasets \
-                            mlflow-training python train.py
+                            mlflow-generic
                         '''
                     }
                 }
             }
         }
-
     }
     post {
         always {
