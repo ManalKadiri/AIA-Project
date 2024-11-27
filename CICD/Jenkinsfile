@@ -12,77 +12,50 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Cloner le code source depuis GitHub
+                // Cloner le dépôt GitHub
                 checkout scm
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Build Docker Image') {
             steps {
-                parallel (
-                    "Build MLflow Image": {
-                        dir('CICD/mlflow') {
-                            sh 'docker build -t mlflow-image .'
-                        }
-                    },
-                    "Build API Image": {
-                        dir('CICD/API') {
-                            sh 'docker build -t fraud-detection-api .'
-                        }
-                    }
-                )
-            }
-        }
-
-        stage('Generate .env File') {
-            steps {
-                dir('CICD') {
-                    script {
-                        writeFile file: '.env', text: """
-APP_URI=${APP_URI}
-AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-BACKEND_STORE_URI=${BACKEND_STORE_URI}
-ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
-POSTMARK_API_KEY=${POSTMARK_API_KEY}
-MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
-"""
-                    }
+                dir('CICD/mlflow') {
+                    sh """
+                    docker build -t mlflow-image --build-arg REPO_URL=https://github.com/username/project-name.git .
+                    """
                 }
             }
         }
 
         stage('Run Training Script') {
             steps {
-                dir('CICD/mlflow') {
+                script {
                     sh """
-                    docker run --env-file ../.env -p 4000:4000 -v "\$(pwd):/home/app" mlflow-image python /home/app/train.py
+                    docker run --env-file CICD/.env -p 4000:4000 mlflow-image python /home/app/CICD/mlflow/train.py
                     """
                 }
             }
         }
 
-        stage('Run Preprocessing Tests') {
+        stage('Run Tests') {
             steps {
-                dir('CICD') {
-                    script {
-                        def test_result = sh(script: """
-                        docker run --env-file .env \
-                            -v "\$(pwd)/tests:/home/app/tests" mlflow-image \
-                            pytest --maxfail=1 --disable-warnings -q /home/app/tests/test_data_preprocessing.py
-                        """, returnStatus: true)
+                script {
+                    def test_result = sh(script: """
+                    docker run --env-file CICD/.env \
+                        mlflow-image \
+                        pytest --maxfail=1 --disable-warnings -q /home/app/CICD/tests
+                    """, returnStatus: true)
 
-                        if (test_result != 0) {
-                            echo "Preprocessing tests failed. Sending alert email..."
-                            sh """
-                            python3 mlflow/send_email.py \
-                                "Preprocessing Tests Failed" \
-                                "Les tests de prétraitement ont échoué. Vérifiez les logs Jenkins."
-                            """
-                            error "Preprocessing tests failed. Pipeline stopped."
-                        } else {
-                            echo "Preprocessing tests passed successfully."
-                        }
+                    if (test_result != 0) {
+                        echo "Tests failed. Sending alert email..."
+                        sh """
+                        docker run --env-file CICD/.env \
+                            mlflow-image \
+                            python /home/app/CICD/mlflow/send_email.py "Tests Failed" "Les tests ont échoué. Vérifiez les logs Jenkins."
+                        """
+                        error "Tests failed. Pipeline stopped."
+                    } else {
+                        echo "All tests passed successfully."
                     }
                 }
             }
@@ -90,20 +63,18 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
 
         stage('Validate Model Performance') {
             steps {
-                dir('CICD/mlflow') {
-                    script {
-                        def validation_passed = sh(script: """
-                        docker run --env-file ../.env \
-                            -v "\$(pwd):/home/app" mlflow-image \
-                            python /home/app/check_model_performance.py
-                        """, returnStatus: true)
+                script {
+                    def validation_passed = sh(script: """
+                    docker run --env-file CICD/.env \
+                        mlflow-image \
+                        python /home/app/CICD/mlflow/check_model_performance.py
+                    """, returnStatus: true)
 
-                        if (validation_passed != 0) {
-                            echo "Validation failed. Model does not meet performance criteria."
-                            currentBuild.result = "UNSTABLE"
-                        } else {
-                            echo "Validation passed. Model meets performance criteria."
-                        }
+                    if (validation_passed != 0) {
+                        echo "Validation failed. Model does not meet performance criteria."
+                        currentBuild.result = "UNSTABLE"
+                    } else {
+                        echo "Validation passed. Model meets performance criteria."
                     }
                 }
             }
@@ -114,33 +85,20 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
                 expression { currentBuild.result == "UNSTABLE" }
             }
             steps {
-                dir('CICD/mlflow') {
-                    sh """
-                    docker run --env-file ../.env \
-                        -v "\$(pwd):/home/app" mlflow-image \
-                        python /home/app/rollback_model.py
-                    """
-                }
+                sh """
+                docker run --env-file CICD/.env \
+                    mlflow-image \
+                    python /home/app/CICD/mlflow/rollback_model.py
+                """
             }
         }
 
         stage('Run API Container') {
             steps {
-                script {
-                    sh 'docker rm -f fraud-detection-api || true'
-                    sh 'docker run -d -p 8005:8005 --name fraud-detection-api fraud-detection-api'
-                }
-            }
-        }
-
-        stage('Post-build Cleanup') {
-            steps {
-                echo "Cleaning up Docker containers and images..."
-                sh '''
-                docker ps -a --filter "ancestor=mlflow-image" -q | xargs -r docker rm -f
-                docker ps -a --filter "ancestor=fraud-detection-api" -q | xargs -r docker rm -f
-                docker rmi --force mlflow-image fraud-detection-api || true
-                '''
+                sh """
+                docker rm -f fraud-detection-api || true
+                docker run -d -p 8005:8005 --name fraud-detection-api mlflow-image
+                """
             }
         }
     }
@@ -151,13 +109,11 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
         }
         failure {
             echo "Une erreur est survenue. Envoi d'un email d'alerte..."
-            dir('CICD/mlflow') {
-                sh """
-                python3 send_email.py \
-                    "Pipeline Jenkins Échoué" \
-                    "Le pipeline Jenkins a échoué dans une des étapes. Vérifiez les logs Jenkins."
-                """
-            }
+            sh """
+            docker run --env-file CICD/.env \
+                mlflow-image \
+                python /home/app/CICD/mlflow/send_email.py "Pipeline Jenkins Failed" "Une erreur est survenue. Vérifiez les logs Jenkins."
+            """
         }
     }
 }
