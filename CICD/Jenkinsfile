@@ -126,17 +126,18 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
             }
         }
 
-        stage('Deploy API') {
+        stage('Run API Container') {
             steps {
-                dir('CICD/API') {
-                    sh """
-                    docker run --network host -d \
-                        -v "\$(pwd):/home/app" \
-                        fraud-detection-api \
-                        python /home/app/api.py
-                    """
+                script {
+                    // Supprimer le conteneur s'il existe déjà
+                    sh 'docker rm -f fraud-detection-api || true'
+
+                    // Lancer le conteneur
+                    sh 'docker run -d -p 8005:8005 --name fraud-detection-api fraud-detection-api'
                 }
             }
+        }
+
         }
 
     }
