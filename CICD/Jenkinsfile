@@ -13,14 +13,15 @@ pipeline {
         stage('Démarrer le serveur MLflow') {
             steps {
                 script {
-                    // Démarrer un conteneur MLflow comme serveur de suivi
                     sh '''
                     docker run -d --name mlflow-server \
                         -p 5000:5000 \
-                        -v $(pwd)/mlruns:/mlflow/mlruns \
+                        -v $(pwd)/artifacts:/home/app/artifacts \
+                        -v $(pwd)/mlruns:/home/app/mlruns \
+                        -v $(pwd)/mlflow.db:/home/app/mlflow.db \
                         mlflow/mlflow:latest server \
-                        --backend-store-uri sqlite:///mlflow.db \
-                        --default-artifact-root ./artifacts
+                        --backend-store-uri sqlite:///home/app/mlflow.db \
+                        --default-artifact-root /home/app/artifacts
                     '''
                 }
             }
@@ -29,7 +30,6 @@ pipeline {
             steps {
                 dir('CICD/mlflow') {
                     script {
-                        // Construire l'image Docker pour le script d'entraînement
                         sh 'docker build -t mlflow-training .'
                     }
                 }
@@ -55,7 +55,6 @@ pipeline {
     post {
         always {
             script {
-                // Nettoyer le conteneur MLflow
                 sh 'docker rm -f mlflow-server || true'
             }
         }
