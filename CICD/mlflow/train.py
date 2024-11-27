@@ -19,7 +19,7 @@ output_dir = "/tmp"
 preprocessor_path = os.path.join(output_dir, "preprocessor.pkl")
 
 # Charger le dataset
-LOCAL_PATH = "fraudTest.csv"  # Assurez-vous que le fichier est téléchargé
+LOCAL_PATH = "s3://bucketkadiri/datasets/fraudTest.csv"  # Assurez-vous que le fichier est téléchargé
 df = pd.read_csv(LOCAL_PATH)
 
 # Prétraitement des données
