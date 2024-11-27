@@ -15,7 +15,7 @@ pipeline {
                     branches: [[name: '*/main']],
                     userRemoteConfigs: [[
                         url: 'https://github.com/ManalKadiri/AIA-Project.git',
-                        credentialsId: 'your-credentials-id'
+                        credentialsId: 'your-credentials-id' // Remplacez par l'ID des credentials Jenkins
                     ]]
                 ])
             }
@@ -25,7 +25,7 @@ pipeline {
             steps {
                 script {
                     sh """
-                    docker network disconnect -f mlflow-network $(docker ps -q --filter network=mlflow-network) || true
+                    docker network disconnect -f mlflow-network \$(docker ps -q --filter network=mlflow-network) || true
                     docker network rm mlflow-network || true
                     docker network create mlflow-network
                     """
@@ -47,7 +47,7 @@ BACKEND_STORE_URI=${BACKEND_STORE_URI}
 ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
 MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
 """
-                        sh 'ls -la && cat .env' // Vérification pour le développement
+                        sh 'ls -la && cat .env' // Vérification en développement
                         sh 'chmod 644 .env'
                     }
                 }
@@ -99,7 +99,7 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
             steps {
                 dir('CICD/mlflow') {
                     script {
-                        sh 'ls -la train.py'
+                        sh 'ls -la train.py' // Vérifier la présence du fichier train.py
                         sh """
                         docker run --rm --network mlflow-network \
                             --env-file ../.env \
@@ -115,7 +115,7 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
         always {
             echo 'Nettoyage des conteneurs et du réseau Docker...'
             sh """
-            docker network disconnect -f mlflow-network $(docker ps -q --filter network=mlflow-network) || true
+            docker network disconnect -f mlflow-network \$(docker ps -q --filter network=mlflow-network) || true
             docker rm -f mlflow-server || true
             docker network rm mlflow-network || true
             """
