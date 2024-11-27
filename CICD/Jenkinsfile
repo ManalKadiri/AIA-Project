@@ -138,19 +138,6 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
                 }
             }
         }
-        stage('Post-build Cleanup') {
-            steps {
-                echo "Cleaning up Docker containers and images..."
-                sh '''
-                # Supprimer tous les conteneurs utilisant les images mlflow-image et fraud-detection-api
-                docker ps -a --filter "ancestor=mlflow-image" -q | xargs -r docker rm -f
-                docker ps -a --filter "ancestor=fraud-detection-api" -q | xargs -r docker rm -f
-
-                # Supprimer les images Docker
-                docker rmi --force mlflow-image fraud-detection-api || true
-        '''
-            }
-        }
 
     }
 
