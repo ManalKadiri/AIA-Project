@@ -58,7 +58,7 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
                     sh """
                     docker run -d --name mlflow-server \
                         --network mlflow-network \
-                        --env-file .env \
+                        --env-file CICD/.env \
                         -v "\$(pwd)/tmp:/home/app/tmp" \
                         -p 4000:4000 \
                         mlflow-image
