@@ -19,15 +19,7 @@ pipeline {
                 sh 'docker network create mlflow-network || true'
             }
         }
-
-        stage('Build Docker Image for MLflow') {
-            steps {
-                dir('CICD/mlflow') {
-                    sh 'docker build -t mlflow-image .'
-                }
-            }
-        }
-
+                
         stage('Generate .env File') {
             steps {
                 dir('CICD') {
@@ -44,6 +36,15 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
                 }
             }
         }
+
+        stage('Build Docker Image for MLflow') {
+            steps {
+                dir('CICD/mlflow') {
+                    sh 'docker build -t mlflow-image .'
+                }
+            }
+        }
+
 
         stage('Prepare Volume') {
             steps {
