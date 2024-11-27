@@ -37,9 +37,9 @@ pipeline {
                     // Arrêter les conteneurs existants
                     sh 'docker rm -f mlflow-server || true'
 
-                    // Lancer le serveur MLflow
+                    // Lancer le serveur MLflow sur le réseau personnalisé
                     sh '''
-                    docker run -d --name mlflow-server \
+                    docker run -d --name mlflow-server --network mlflow-network \
                         -p 4000:4000 \
                         -v $(pwd)/artifacts:/home/app/artifacts \
                         -v $(pwd)/mlruns:/home/app/mlruns \
@@ -49,6 +49,7 @@ pipeline {
                 }
             }
         }
+
         stage('Construire l’image Docker pour l’entraînement') {
             steps {
                 dir('CICD/mlflow') {
