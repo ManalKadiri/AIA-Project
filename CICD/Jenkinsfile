@@ -25,7 +25,7 @@ pipeline {
             steps {
                 script {
                     sh """
-                    docker network disconnect -f mlflow-network \$(docker ps -q --filter network=mlflow-network) || true
+                    docker ps -q --filter network=mlflow-network | xargs -r docker network disconnect -f mlflow-network || true
                     docker network rm mlflow-network || true
                     docker network create mlflow-network
                     """
@@ -47,8 +47,8 @@ BACKEND_STORE_URI=${BACKEND_STORE_URI}
 ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
 MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
 """
-                        // Ajout de diagnostics pour confirmer la création correcte du fichier .env
-                        sh 'ls -la .env && cat .env' 
+                        // Diagnostics pour confirmer la création correcte du fichier .env
+                        sh 'ls -la .env && cat .env'
                         sh 'chmod 644 .env'
                     }
                 }
@@ -82,9 +82,15 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
             steps {
                 script {
                     sh """
+                    ENV_PATH=\$(pwd)/CICD/.env
+                    if [ ! -f "\$ENV_PATH" ]; then
+                        echo "Erreur : Le fichier .env est introuvable à \$ENV_PATH"
+                        exit 1
+                    fi
+
                     docker run -d --name mlflow-server \
                         --network mlflow-network \
-                        --env-file ../CICD/.env \
+                        --env-file "\$ENV_PATH" \
                         -v "\$(pwd)/tmp:/home/app/tmp" \
                         -p 4000:4000 \
                         mlflow-image
@@ -97,21 +103,23 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
             steps {
                 dir('CICD/mlflow') {
                     script {
-                        // Diagnostic supplémentaire pour confirmer le montage correct
+                        // Vérifiez la présence du fichier train.py
                         sh 'ls -la train.py'
 
                         // Confirmez la présence des fichiers montés dans le conteneur Docker
                         sh """
+                        ENV_PATH=\$(pwd)/../CICD/.env
                         docker run --rm --network mlflow-network \
-                            --env-file ../.env \
+                            --env-file "\$ENV_PATH" \
                             -v "\$(pwd):/home/app" \
                             mlflow-image ls -la /home/app
                         """
 
-                        // Exécution du script d'entraînement
+                        // Exécutez le script d'entraînement
                         sh """
+                        ENV_PATH=\$(pwd)/../CICD/.env
                         docker run --rm --network mlflow-network \
-                            --env-file ../.env \
+                            --env-file "\$ENV_PATH" \
                             -v "\$(pwd):/home/app" \
                             mlflow-image python /home/app/train.py
                         """
@@ -128,6 +136,7 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
             docker ps -q --filter network=mlflow-network | xargs -r docker network disconnect -f mlflow-network || true
             docker rm -f mlflow-server || true
             docker network rm mlflow-network || true
+            rm -rf "\$(pwd)/tmp" || true
             """
         }
         success {
