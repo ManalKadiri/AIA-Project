@@ -148,12 +148,9 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
 
                 # Supprimer les images Docker
                 docker rmi --force mlflow-image fraud-detection-api || true
-        '''
+                '''
             }
         }
-
-        }
-
     }
 
     post {
