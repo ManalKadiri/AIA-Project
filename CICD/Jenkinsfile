@@ -59,9 +59,7 @@ MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
                     script {
                         // Monter et vérifier les fichiers dans le conteneur
                         sh """
-                        docker run --env-file ../.env -p 4000:4000 \
-                        -v "\$(pwd):/home/app" mlflow-image \
-                        ls -al /home/app
+                        docker run --env-file ../.env -p 4000:4000 -v "$(pwd):/home/app" mlflow-image python train.py
                         """
                     }
                     // Lancer le script de formation
