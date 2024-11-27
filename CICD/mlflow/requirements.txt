@@ -14,3 +14,6 @@ requests
 boto3
 mock
 imbalanced-learn
+fsspec
+s3fs
+
