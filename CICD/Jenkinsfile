@@ -49,8 +49,6 @@ pipeline {
                     '''
                 }
             }
-            }
-
         }
         stage('Entraîner le modèle avec MLflow') {
             steps {
