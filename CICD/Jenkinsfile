@@ -49,23 +49,29 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
                 }
             }
         }
-
+        
+        stage('Prepare Volume') {
+            steps {
+                // Créer le répertoire tmp pour le montage
+                sh 'mkdir -p tmp'
+            }
+        }
         
         stage('Start MLflow Server') {
             steps {
-                dir('CICD') {
-                    script {
-                        // Démarrer le serveur MLflow dans un conteneur en utilisant le fichier .env
-                        sh """
-                        docker run -d --name mlflow-server \
-                            --network mlflow-network \
-                            --env-file .env \
-                            -p 4000:4000 \
-                            mlflow-image
-                        """
-                    }
+                script {
+                    // Démarrer le serveur MLflow avec le montage du volume
+                    sh """
+                    docker run -d --name mlflow-server \
+                        --network mlflow-network \
+                        --env-file .env \
+                        -v "\$(pwd)/tmp:/home/app/tmp" \
+                        -p 4000:4000 \
+                        mlflow-image
+                    """
                 }
             }
+        }
         }
 
 
