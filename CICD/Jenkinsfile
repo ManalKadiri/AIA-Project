@@ -24,10 +24,10 @@ pipeline {
                         // Lancer le conteneur pour entraîner le modèle
                         sh '''
                         docker run --rm \
-                            -e AWS_ACCESS_KEY_ID=${aws-access-key-id} \
-                            -e AWS_SECRET_ACCESS_KEY=${aws-secret-access-key} \
-                            -e BACKEND_STORE_URI=${backend-store-uri} \
-                            -e ARTIFACT_STORE_URI=${artifact-store-uri} \
+                            -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+                            -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+                            -e BACKEND_STORE_URI=${BACKEND_STORE_URI} \
+                            -e ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI} \
                             mlflow-training python train.py
                         '''
                     }
