@@ -1,67 +1,58 @@
 pipeline {
     agent any
     environment {
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id') // Credential AWS Access Key
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key') // Credential AWS Secret Key
+        BACKEND_STORE_URI = credentials('backend-store-uri') // Credential Backend Store URI
+        ARTIFACT_STORE_URI = credentials('artifact-store-uri') // Credential Artifact Store URI
+        POSTMARK_API_KEY = credentials('postmark-api-key') // Credential Postmark API Key
+       
     }
     stages {
-        stage('Cloner le dépôt GitHub') {
+        stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/ManalKadiri/AIA-Project.git'
+                // Cloner le code source depuis GitHub
+                checkout scm
             }
         }
-        stage('Préparer les volumes') {
-            steps {
-                script {
-                    sh '''
-                    mkdir -p $(pwd)/artifacts
-                    mkdir -p $(pwd)/mlruns
-                    mkdir -p $(pwd)/datasets
-                    touch $(pwd)/mlflow.db
-                    '''
-                }
-            }
-        }
-        stage('Construire l’image Docker générique') {
-            steps {
-                dir('CICD/mlflow') {
-                    script {
-                        sh 'docker build -t mlflow-generic .'
-                    }
-                }
-            }
-        }
-        stage('Démarrer le serveur MLflow') {
-            steps {
-                script {
-                    // Arrêter les conteneurs existants
-                    sh 'docker rm -f mlflow-server || true'
 
-                    // Lancer le serveur MLflow sur le réseau personnalisé
-                    sh '''
-                    docker run -d --name mlflow-server --network mlflow-network \
-                        -p 4000:4000 \
-                        -v /var/jenkins_home/workspace/AIA-Project-Pipeline/CICD/mlflow/artifacts:/home/app/artifacts \
-                        -v /var/jenkins_home/workspace/AIA-Project-Pipeline/CICD/mlflow/mlruns:/home/app/mlruns \
-                        -v /var/jenkins_home/workspace/AIA-Project-Pipeline/CICD/mlflow/mlflow.db:/home/app/mlflow.db \
-                        -e SERVICE=server \
-                        mlflow-generic
-                    '''
+        stage('Generate .env File') {
+            steps {
+                dir('CICD') {
+                    script {
+                        // Générer le fichier .env avec les variables d'environnement
+                        writeFile file: '.env', text: """
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+BACKEND_STORE_URI=${BACKEND_STORE_URI}
+ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
+POSTMARK_API_KEY=${POSTMARK_API_KEY}
+"""
+                    }
+                    // Vérifier le contenu du fichier .env (supprimer cette ligne en production)
+                    sh 'cat .env'
                 }
             }
         }
-        stage('Entraîner le modèle avec MLflow') {
+
+        stage('Build Docker Images') {
+            steps {
+                dir('CICD/mlflow') {
+                    sh 'docker build -t mlflow-image .'
+                }
+            }
+        }
+
+        stage('Run Training Script') {
             steps {
                 dir('CICD/mlflow') {
                     script {
-                        sh '''
-                        docker run --rm --network mlflow-network \
-                            -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-                            -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-                            -v $(pwd)/artifacts:/home/app/artifacts \
-                            -v $(pwd)/datasets:/home/app/datasets \
-                            mlflow-generic
-                        '''
+                        // Démarrer le conteneur pour exécuter le script train.py
+                        sh """
+                        docker run --rm --env-file ../.env \
+                            -v "\$(pwd):/home/app" \
+                            mlflow-image python /home/app/train.py
+                        """
                     }
                 }
             }
@@ -69,16 +60,15 @@ pipeline {
     }
     post {
         always {
-            script {
-                // Nettoyer les conteneurs restants
-                sh 'docker rm -f mlflow-server || true'
-            }
+            // Nettoyer les conteneurs créés pendant le pipeline
+            echo "Nettoyage des conteneurs Docker..."
+            sh 'docker container prune -f || true'
         }
         success {
-            echo 'Pipeline exécuté avec succès !'
+            echo 'Pipeline exécutée avec succès !'
         }
         failure {
-            echo 'Une erreur est survenue pendant l’exécution du pipeline.'
+            echo 'La pipeline a échoué.'
         }
     }
 }
