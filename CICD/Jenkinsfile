@@ -37,18 +37,20 @@ pipeline {
                     // Arrêter les conteneurs existants
                     sh 'docker rm -f mlflow-server || true'
 
-                    // Lancer le serveur MLflow
+                    // Lancer le serveur MLflow sur le réseau personnalisé
                     sh '''
                     docker run -d --name mlflow-server --network mlflow-network \
                         -p 4000:4000 \
-                        -v $(pwd)/artifacts:/home/app/artifacts \
-                        -v $(pwd)/mlruns:/home/app/mlruns \
-                        -v $(pwd)/mlflow.db:/home/app/mlflow.db \
+                        -v /var/jenkins_home/workspace/AIA-Project-Pipeline/CICD/mlflow/artifacts:/home/app/artifacts \
+                        -v /var/jenkins_home/workspace/AIA-Project-Pipeline/CICD/mlflow/mlruns:/home/app/mlruns \
+                        -v /var/jenkins_home/workspace/AIA-Project-Pipeline/CICD/mlflow/mlflow.db:/home/app/mlflow.db \
                         -e SERVICE=server \
                         mlflow-generic
                     '''
                 }
             }
+            }
+
         }
         stage('Entraîner le modèle avec MLflow') {
             steps {
