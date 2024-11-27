@@ -32,4 +32,70 @@ ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
 MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
 """
                         sh 'ls -la && cat .env' // Vérification en développement
-    
+                        sh 'chmod 644 .env'
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker Image for MLflow') {
+            steps {
+                dir('CICD/mlflow') {
+                    sh 'docker build -t mlflow-image .'
+                }
+            }
+        }
+
+        stage('Prepare Volume') {
+            steps {
+                sh 'mkdir -p tmp'
+            }
+        }
+
+        stage('Start MLflow Server') {
+            steps {
+                script {
+                    sh """
+                    docker run -d --name mlflow-server \
+                        --network mlflow-network \
+                        --env-file CICD/.env \
+                        -v "\$(pwd)/tmp:/home/app/tmp" \
+                        -p 4000:4000 \
+                        mlflow-image
+                    """
+                }
+            }
+        }
+
+        stage('Run Training Script') {
+            steps {
+                dir('CICD/mlflow') {
+                    script {
+                        sh 'ls -la train.py' // Vérification
+                        sh """
+                        docker run --rm --network mlflow-network \
+                            --env-file ../.env \
+                            -v "\$(pwd):/home/app" \
+                            mlflow-image python /home/app/train.py
+                        """
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            echo 'Nettoyage des conteneurs et du réseau Docker...'
+            sh """
+            docker rm -f mlflow-server || true
+            docker network rm mlflow-network || true
+            """
+        }
+        success {
+            echo 'Pipeline exécutée avec succès !'
+        }
+        failure {
+            echo 'La pipeline a échoué.'
+        }
+    }
+}
