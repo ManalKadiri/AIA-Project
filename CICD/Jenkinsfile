@@ -19,7 +19,7 @@ pipeline {
                         -v $(pwd)/artifacts:/home/app/artifacts \
                         -v $(pwd)/mlruns:/home/app/mlruns \
                         -v $(pwd)/mlflow.db:/home/app/mlflow.db \
-                        mlflow/mlflow:2.7.1 server \  # Remplacez "latest" par une version spécifique
+                        mlflow/mlflow:2.7.1 server \
                         --backend-store-uri sqlite:///home/app/mlflow.db \
                         --default-artifact-root /home/app/artifacts
                     '''
