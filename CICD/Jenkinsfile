@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id') // AWS pour le téléchargement depuis S3
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
     }
     stages {
@@ -10,11 +10,26 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/ManalKadiri/AIA-Project.git'
             }
         }
-        stage('Construire l’image Docker pour MLflow') {
+        stage('Démarrer le serveur MLflow') {
+            steps {
+                script {
+                    // Démarrer un conteneur MLflow comme serveur de suivi
+                    sh '''
+                    docker run -d --name mlflow-server \
+                        -p 5000:5000 \
+                        -v $(pwd)/mlruns:/mlflow/mlruns \
+                        mlflow/mlflow:latest server \
+                        --backend-store-uri sqlite:///mlflow.db \
+                        --default-artifact-root ./artifacts
+                    '''
+                }
+            }
+        }
+        stage('Construire l’image Docker pour l’entraînement') {
             steps {
                 dir('CICD/mlflow') {
                     script {
-                        // Construire l'image Docker pour MLflow
+                        // Construire l'image Docker pour le script d'entraînement
                         sh 'docker build -t mlflow-training .'
                     }
                 }
@@ -24,13 +39,6 @@ pipeline {
             steps {
                 dir('CICD/mlflow') {
                     script {
-                        // Vérifier les variables d'environnement
-                        sh '''
-                        echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}"
-                        echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"
-                        '''
-
-                        // Lancer le conteneur pour entraîner le modèle
                         sh '''
                         docker run --rm \
                             -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
@@ -45,6 +53,12 @@ pipeline {
         }
     }
     post {
+        always {
+            script {
+                // Nettoyer le conteneur MLflow
+                sh 'docker rm -f mlflow-server || true'
+            }
+        }
         success {
             echo 'Pipeline exécuté avec succès !'
         }
