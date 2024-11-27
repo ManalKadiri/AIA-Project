@@ -1,16 +1,18 @@
-FROM python:3.9-slim
+FROM continuumio/miniconda3
 
-# Installer MLflow et les dépendances
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    curl && \
-    pip install --no-cache-dir \
-    mlflow==2.7.1 boto3 psycopg2-binary fsspec s3fs && \
-    apt-get clean
-
-# Créer les répertoires nécessaires pour les artefacts et la base de données
-RUN mkdir -p /home/app/artifacts /home/app/mlruns
+# Définir le répertoire de travail
 WORKDIR /home/app
 
-# Définir la commande pour exécuter le serveur MLflow
-CMD ["mlflow", "server", "--host", "0.0.0.0", "--backend-store-uri", "sqlite:///mlflow.db", "--default-artifact-root", "/home/app/artifacts"]
+# Copier tous les fichiers du contexte de construction dans le répertoire de travail
+COPY . /home/app/
+
+# Installer les dépendances Python
+RUN pip install -r /home/app/requirements.txt
+RUN pip install fsspec s3fs
+RUN pip install psycopg2-binary
+
+# Définir une variable d'environnement non sensible
+ENV PORT=5000
+
+# Lancer le script d'entraînement
+CMD ["python", "train.py"]
