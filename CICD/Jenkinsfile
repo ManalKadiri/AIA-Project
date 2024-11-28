@@ -21,6 +21,13 @@ pipeline {
                 checkout scm
             }
         }
+    stage('Debug Checkout') {
+        steps {
+            dir('CICD/mlflow') {
+                sh 'ls -la'
+            }
+        }    
+    }
 
         stage('Build Docker Images') {
             steps {
