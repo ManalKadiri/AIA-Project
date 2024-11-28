@@ -118,27 +118,27 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
             steps {
                 dir('CICD/tests') {
                     script {
-                        // Vérifier que les fichiers de tests sont montés correctement
+                        // Vérifiez que les fichiers de tests sont montés correctement dans /home/app
                         sh """
                         docker run --env-file ../.env \
-                            -v "\$(pwd):/home/tests" tests-image \
-                            sh -c "ls -la /home/tests"
+                            -v "\$(pwd):/home/app/tests" tests-image \
+                            sh -c "ls -la /home/app/tests"
                         """
         
-                        // Exécuter les tests
+                        // Exécutez les tests
                         def test_result = sh(script: """
                         docker run --env-file ../.env \
-                            -v "\$(pwd):/home/tests" tests-image \
-                            pytest test_data_preprocessing.py test_model_training.py
+                            -v "\$(pwd):/home/app/tests" tests-image \
+                            pytest /home/app/tests/test_data_preprocessing.py /home/app/tests/test_model_training.py
                         """, returnStatus: true)
         
-                        // Vérifier les résultats des tests
+                        // Vérifiez les résultats des tests
                         if (test_result != 0) {
                             echo "Tests échoués. Envoi d'un email d'alerte..."
                             sh """
                             docker run --env-file ../.env \
-                                -v "\$(pwd):/home/tests" tests-image \
-                                python send_email.py \
+                                -v "\$(pwd):/home/app/tests" tests-image \
+                                python /home/app/send_email.py \
                                 "Tests échoués" \
                                 "Un ou plusieurs tests ont échoué. Veuillez vérifier les logs Jenkins pour plus de détails."
                             """
