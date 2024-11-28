@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y curl unzip && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copier les dépendances pour les tests
-COPY requirements.txt 
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copier les fichiers de tests et le script `send_email.py`
