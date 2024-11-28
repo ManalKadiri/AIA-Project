@@ -30,6 +30,8 @@ pipeline {
                             sh 'docker build -t mlflow-image .'
                         }
                     },
+
+                    
                     "Build API Image": {
                         dir('CICD/API') {
                             sh 'docker build -t fraud-detection-api .'
