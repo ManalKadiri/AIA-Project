@@ -11,9 +11,8 @@ pipeline {
         POSTMARK_API_KEY = credentials('postmark-api-key') // Credential Postmark API Key
         MLFLOW_EXPERIMENT_NAME = credentials('mlflow-experiment-name') // Nouvelle variable ajoutée
         MLFLOW_TRACKING_URI = credentials('mlflow-tracking-uri') // Nouvelle variable ajoutée
-    
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
@@ -54,7 +53,6 @@ ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
 POSTMARK_API_KEY=${POSTMARK_API_KEY}
 MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
 MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
-
 """
                     }
                     // Afficher le contenu pour vérification (supprimez cette ligne en production)
@@ -62,3 +60,5 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
                 }
             }
         }
+    }
+}
