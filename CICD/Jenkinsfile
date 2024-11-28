@@ -128,16 +128,16 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
                         echo "Vérification des fichiers montés dans /home/tests..."
                         sh """
                         docker run --env-file ../.env \
-                            -v "\$(pwd):/home/tests" tests-image \
-                            sh -c "ls -la /home/tests"
+                            -v "\$(pwd):/home/app/tests" tests-image \
+                            sh -c "ls -la /home/app/tests"
                         """
         
                         // Exécuter les tests
                         echo "Exécution des tests..."
                         def test_result = sh(script: """
                         docker run --env-file ../.env \
-                            -v "\$(pwd):/home/tests" tests-image \
-                            pytest /home/tests/test_data_preprocessing.py /home/tests/test_model_training.py
+                            -v "\$(pwd):/home/app/tests" tests-image \
+                            pytest /home/app/tests/test_data_preprocessing.py /home/tests/test_model_training.py
                         """, returnStatus: true)
         
                         // Vérifier les résultats des tests
@@ -145,8 +145,8 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
                             echo "Tests échoués. Envoi d'un email d'alerte..."
                             sh """
                             docker run --env-file ../.env \
-                                -v "\$(pwd):/home/tests" tests-image \
-                                python /home/tests/send_email.py \
+                                -v "\$(pwd):/home/app/tests" tests-image \
+                                python /home/app/tests/send_email.py \
                                 "Tests échoués" \
                                 "Un ou plusieurs tests ont échoué. Veuillez vérifier les logs Jenkins pour plus de détails."
                             """
