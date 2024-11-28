@@ -109,20 +109,20 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
 
         stage('Run Tests') {
             steps {
-                dir('CICD/mlflow') {
+                dir('CICD/mlflow') { // Pas besoin de /tests
                     script {
-                        // Vérifier que les fichiers de tests sont montés correctement
-                        sh """
-                        docker run --env-file ../.env \
-                            -v "\$(pwd)/tests:/home/app/tests" mlflow-image \
-                            sh -c "ls -la /home/app/tests"
-                        """
+                    // Vérifier que les fichiers de tests sont présents
+                    sh """
+                    docker run --env-file ../.env \
+                        -v "\$(pwd):/home/app" mlflow-image \
+                        sh -c "ls -la /home/app"
+                    """
 
-                        // Exécuter les tests
-                        def test_result = sh(script: """
+                    // Exécuter les tests directement
+                    def test_result = sh(script: """
                         docker run --env-file ../.env \
-                            -v "\$(pwd)/tests:/home/app/tests" mlflow-image \
-                            pytest --maxfail=1 --disable-warnings -q /home/app/tests/test_data_preprocessing.py /home/app/tests/test_model_training.py
+                            -v "\$(pwd):/home/app" mlflow-image \
+                            pytest --maxfail=1 --disable-warnings -q /home/app/test_data_preprocessing.py /home/app/test_model_training.py
                         """, returnStatus: true)
 
                         // Vérifier les résultats des tests
@@ -139,9 +139,9 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
                         } else {
                             echo "Tous les tests ont réussi avec succès."
                         }
+                        }
                     }
+                    }            
                 }
-            }
-        }
-    }
+
 }
