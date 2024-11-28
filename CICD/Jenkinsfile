@@ -64,8 +64,9 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
             steps {
                 dir('CICD/mlflow') {
                     sh """
-                    docker run --env-file ../.env -p 4000:4000 -v "\$(pwd):/home/app" mlflow-image python /home/app/train.py
+                    docker run --env-file ../.env -p 4000:4000 -v "\$(pwd):/home/app" mlflow-image
                     """
+                    
                 }
             }
         }
