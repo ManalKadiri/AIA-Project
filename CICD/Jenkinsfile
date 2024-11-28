@@ -135,7 +135,7 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
                         if (test_result != 0) {
                             echo "Tests échoués. Envoi d'un email d'alerte..."
                             sh """
-                            docker run tests-image python send_email.py \
+                            docker run --env-file ../.env tests-image python send_email.py \
                                 "Tests échoués" \
                                 "Un ou plusieurs tests ont échoué. Veuillez vérifier les logs Jenkins pour plus de détails."
                             """
