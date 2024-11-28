@@ -27,4 +27,4 @@ EXPOSE 4000
 RUN echo "Vérification du répertoire courant et des fichiers présents :" && ls -la
 
 # Commande par défaut pour exécuter un serveur MLflow ou autre
-CMD ["mlflow", "server", "--backend-store-uri", "sqlite:///mlflow.db", "--default-artifact-root", "/home/app/artifacts", "--host", "0.0.0.0", "--port", "4000"]
+CMD ["mlflow", "server", "--backend-store-uri", "--default-artifact-root", "/home/app/artifacts", "--host", "0.0.0.0", "--port", "4000"]
