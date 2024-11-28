@@ -12,7 +12,6 @@ pipeline {
         MLFLOW_EXPERIMENT_NAME = credentials('mlflow-experiment-name') // Nouvelle variable ajoutée
         MLFLOW_TRACKING_URI = credentials('mlflow-tracking-uri') // Nouvelle variable ajoutée
     }
-
     stages {
         stage('Checkout') {
             steps {
@@ -60,5 +59,13 @@ MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
                 }
             }
         }
-    }
-}
+
+        stage('Run Training Script') {
+            steps {
+                dir('CICD/mlflow') {
+                    sh """
+                    docker run --env-file ../.env -p 4000:4000 -v "\$(pwd):/home/app" mlflow-image python /home/app/train.py
+                    """
+                }
+            }
+        }
