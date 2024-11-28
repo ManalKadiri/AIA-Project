@@ -6,10 +6,45 @@ from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
+import boto3
+from dotenv import load_dotenv 
+
+# Charger les variables d'environnement depuis le fichier .env
+load_dotenv()
+
+# AWS S3 Parameters
+bucket_name = os.getenv("AWS_S3_BUCKET_NAME")
+object_key = os.getenv("OBJECT_KEY")
+local_file_path = "fraudTest.csv"
+
+# AWS Credentials (automatiquement pris en charge si configurés dans l'environnement)
+aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
+aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+aws_region = os.getenv("AWS_DEFAULT_REGION")
+
+# Initialize S3 client
+s3 = boto3.client(
+    's3',
+    aws_access_key_id=aws_access_key,
+    aws_secret_access_key=aws_secret_access_key,
+    region_name=aws_region
+)
+
+# Download dataset from S3
+try:
+    print("Downloading file from S3...")
+    s3.download_file(bucket_name, object_key, local_file_path)
+    print("Download completed:", local_file_path)
+except Exception as e:
+    print("Error downloading file:", e)
+    exit(1)
+
 
 def test_model_accuracy():
-    # Charger un échantillon de données pour les tests
-    df = pd.read_csv("fraudTest.csv").sample(1000)
+    # Load dataset
+    df = pd.read_csv(local_file_path)
+    print("Data loaded:", df.head())
+
 
     # Prétraitement des données (repris de train.py)
     df['gender'] = df['gender'].apply(lambda x: 1 if x == 'F' else 0)
