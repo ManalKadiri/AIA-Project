@@ -1,24 +1,23 @@
 pipeline {
     agent any
     environment {
-        APP_URI_MODEL = credentials('app-uri-model') // Nom du credential pour APP_URI
-        APP_URI_API = credentials('app-uri-api') // Nom du credential pour APP_URI
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id') // Credential AWS Access Key
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key') // Credential AWS Secret Key
-        BACKEND_STORE_URI_MODEL = credentials('backend-store-uri-model') // Credential Backend Store URI
-        BACKEND_STORE_URI_API = credentials('backend-store-uri-api') // Credential Backend Store URI
-        ARTIFACT_STORE_URI = credentials('artifact-store-uri') // Credential Artifact Store URI
-        POSTMARK_API_KEY = credentials('postmark-api-key') // Credential Postmark API Key
-        MLFLOW_EXPERIMENT_NAME = credentials('mlflow-experiment-name') // Nouvelle variable ajoutée
-        MLFLOW_TRACKING_URI = credentials('mlflow-tracking-uri') // Nouvelle variable ajoutée
-        AWS_S3_BUCKET_NAME = credentials('aws-s3-bucket-name') // Nouvelle variable ajoutée
-        OBJECT_KEY = credentials('object-key') // Nouvelle variable ajoutée
-        AWS_DEFAULT_REGION = credentials('aws-default-region') // Nouvelle variable ajoutée
+        APP_URI_MODEL = credentials('app-uri-model')
+        APP_URI_API = credentials('app-uri-api')
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+        BACKEND_STORE_URI_MODEL = credentials('backend-store-uri-model')
+        BACKEND_STORE_URI_API = credentials('backend-store-uri-api')
+        ARTIFACT_STORE_URI = credentials('artifact-store-uri')
+        POSTMARK_API_KEY = credentials('postmark-api-key')
+        MLFLOW_EXPERIMENT_NAME = credentials('mlflow-experiment-name')
+        MLFLOW_TRACKING_URI = credentials('mlflow-tracking-uri')
+        AWS_S3_BUCKET_NAME = credentials('aws-s3-bucket-name')
+        OBJECT_KEY = credentials('object-key')
+        AWS_DEFAULT_REGION = credentials('aws-default-region')
     }
     stages {
         stage('Checkout') {
             steps {
-                // Cloner le code source depuis GitHub
                 checkout scm
             }
         }
@@ -30,7 +29,6 @@ pipeline {
                         dir('CICD/mlflow') {
                             sh 'docker build -t mlflow-image .'
                         }
-                        
                     },
                     "Build API Image": {
                         dir('CICD/API') {
@@ -61,7 +59,6 @@ OBJECT_KEY=${OBJECT_KEY}
 AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
 """
                     }
-                    // Afficher le contenu pour vérification (supprimez cette ligne en production)
                     sh 'cat .env'
                 }
             }
@@ -72,7 +69,8 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
                 dir('CICD/mlflow') {
                     sh """
                     docker run --env-file ../.env \
-                        -v "\$(pwd):/home/app" mlflow-image python /home/app/train.py
+                        -v "\$(pwd):/home/app" \
+                        mlflow-image python /home/app/train.py
                     """
                 }
             }
