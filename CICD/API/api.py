@@ -7,7 +7,7 @@ import tempfile
 import shutil
 from pydantic import BaseModel
 from typing import List
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.responses import RedirectResponse
 import logging
 import os
@@ -18,10 +18,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 description = """
-Welcome to the Fraud Detection API !\n
+Welcome to the Fraud Detection API!\n
 Provide the required information, and you will immediately know if the payment is fraudulent or not.
 
-**Use the endpoint `/predict` to know if the payment is fraudulent or not !**
+**Use the endpoint `/predict` to know if the payment is fraudulent or not!**
 """
 
 tags_metadata = [
@@ -72,8 +72,49 @@ def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
         logger.error("Error during preprocessing: %s", str(e))
         raise ValueError(f"Preprocessing error: {str(e)}")
 
-@app.post("/predict", tags=["Predictions"])
-async def predict(data: List[FraudDetectionInput]):
+@app.post(
+    "/predict",
+    tags=["Predictions"],
+    summary="Predict fraud for a transaction",
+    description="This endpoint predicts whether a transaction is fraudulent based on input features.",
+)
+async def predict(
+    data: List[FraudDetectionInput] = Body(
+        ...,
+        examples={
+            "Prediction 0": {
+                "summary": "Example of a non-fraudulent transaction",
+                "description": "An example input for a non-fraudulent transaction.",
+                "value": [
+                    {
+                        "amt": 2.86,
+                        "gender": "M",
+                        "lat": 33.9659,
+                        "long": -80.9355,
+                        "dob": "1968-03-19",
+                        "merch_lat": 33.986391,
+                        "merch_long": -81.200714
+                    }
+                ]
+            },
+            "Prediction 1": {
+                "summary": "Example of a fraudulent transaction",
+                "description": "An example input for a fraudulent transaction.",
+                "value": [
+                    {
+                        "amt": 24.84,
+                        "gender": "F",
+                        "lat": 31.8599,
+                        "long": -102.7413,
+                        "dob": "1969-09-15",
+                        "merch_lat": 32.575873,
+                        "merch_long": -102.604290
+                    }
+                ]
+            }
+        }
+    )
+):
     try:
         # Convert input data to DataFrame
         fraud_features = pd.DataFrame([item.dict() for item in data])
@@ -84,16 +125,11 @@ async def predict(data: List[FraudDetectionInput]):
         logger.info("Data after preprocessing: %s", fraud_features)
 
         # Configure S3 client and download model
-        s3 = boto3.client(
-            's3',
-            aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.environ.get("AWS_DEFAULT_REGION", "eu-west-3")
-        )
-        bucket_name = os.environ.get("S3_BUCKET_NAME", "bucketkadiri")
-        object_key = os.environ.get("MODEL_S3_OBJECT_KEY", "Folder0/2/7d3be3e355284f15a937433695ad72b0/artifacts/XGBoost/model.pkl")
-        local_file_path = "/app/model.pkl"
-
+        s3 = boto3.client('s3')
+        bucket_name = "bucketkadiri"
+        object_key = "Folder0/2/6bb95941799647829f829f5f25bd7409/artifacts/XGBoost/model.pkl"
+        local_file_path = "/home/app/model.pkl"
+        
         # Check if the model already exists locally
         if not os.path.exists(local_file_path):
             with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -123,6 +159,9 @@ async def predict(data: List[FraudDetectionInput]):
         raise HTTPException(status_code=500, detail=f"Error during prediction: {str(e)}")
 
 
+
+
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 8000))  # Utilisation de la variable d'environnement $PORT
+    uvicorn.run("api:app", host="0.0.0.0", port=port)
