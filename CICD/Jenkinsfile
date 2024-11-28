@@ -70,9 +70,10 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
             steps {
                 dir('CICD/mlflow') {
                     sh """
-                    docker run --env-file ../.env -p 4000:4000 -v "\$(pwd):/home/app" mlflow-image
+                    docker run --env-file ../.env \
+                        -v "\$(pwd):/home/app" \
+                        mlflow-image
                     """
-                    
                 }
             }
         }
