@@ -109,37 +109,39 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
 
         stage('Run Tests') {
             steps {
-                dir('CICD/mlflow') { // Rester dans le dossier mlflow
+                dir('CICD/mlflow') {
                     script {
-                    // Vérifier que les fichiers de tests sont montés correctement
-                    sh """
-                    docker run --env-file ../.env \
-                        -v "\$(pwd)/tests:/home/app/tests" mlflow-image \
-                        sh -c "ls -la /home/app/tests"
-                    """
-
-                    // Exécuter les tests
-                    def test_result = sh(script: """
-                    docker run --env-file ../.env \
-                        -v "\$(pwd)/tests:/home/app/tests" mlflow-image \
-                        pytest --maxfail=1 --disable-warnings -q /home/app/tests/test_data_preprocessing.py /home/app/tests/test_model_training.py
-                    """, returnStatus: true)
-
-                    // Vérifier les résultats des tests
-                    if (test_result != 0) {
-                        echo "Tests échoués. Envoi d'un email d'alerte..."
+                        // Vérifier que les fichiers de tests sont montés correctement
                         sh """
                         docker run --env-file ../.env \
-                            -v "\$(pwd):/home/app" mlflow-image \
-                            python /home/app/send_email.py \
-                            "Tests échoués" \
-                            "Un ou plusieurs tests ont échoué. Veuillez vérifier les logs Jenkins pour plus de détails."
+                            -v "\$(pwd)/tests:/home/app/tests" mlflow-image \
+                            sh -c "ls -la /home/app/tests"
                         """
-                        error "Tests échoués. Pipeline arrêté."
-                    } else {
-                        echo "Tous les tests ont réussi avec succès."
+
+                        // Exécuter les tests
+                        def test_result = sh(script: """
+                        docker run --env-file ../.env \
+                            -v "\$(pwd)/tests:/home/app/tests" mlflow-image \
+                            pytest --maxfail=1 --disable-warnings -q /home/app/tests/test_data_preprocessing.py /home/app/tests/test_model_training.py
+                        """, returnStatus: true)
+
+                        // Vérifier les résultats des tests
+                        if (test_result != 0) {
+                            echo "Tests échoués. Envoi d'un email d'alerte..."
+                            sh """
+                            docker run --env-file ../.env \
+                                -v "\$(pwd):/home/app" mlflow-image \
+                                python /home/app/send_email.py \
+                                "Tests échoués" \
+                                "Un ou plusieurs tests ont échoué. Veuillez vérifier les logs Jenkins pour plus de détails."
+                            """
+                            error "Tests échoués. Pipeline arrêté."
+                        } else {
+                            echo "Tous les tests ont réussi avec succès."
+                        }
                     }
-                    }            
                 }
-                }        
+            }
+        }
+    }
 }
