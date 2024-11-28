@@ -23,8 +23,8 @@ RUN mkdir -p /home/app/artifacts /home/app/tmp /home/app/mlruns /home/app/tests
 
 # Copier les fichiers d'application, y compris train.py
 COPY . /home/app
-COPY tests /home/app/tests
-COPY send_email.py /home/app/send_email.py
+#COPY tests /home/app/tests
+#COPY send_email.py /home/app/send_email.py
 
 # Commande par défaut
 CMD ["python", "train.py"]
