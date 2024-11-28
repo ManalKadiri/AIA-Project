@@ -12,7 +12,7 @@ pipeline {
         MLFLOW_EXPERIMENT_NAME = credentials('mlflow-experiment-name')
         MLFLOW_TRACKING_URI = credentials('mlflow-tracking-uri')
         AWS_S3_BUCKET_NAME = credentials('aws-s3-bucket-name')
-        OBJECT_KEY = credentials('object-key')
+        //OBJECT_KEY = credentials('object-key')//
         AWS_DEFAULT_REGION = credentials('aws-default-region')
     }
     stages {
@@ -70,7 +70,7 @@ POSTMARK_API_KEY=${POSTMARK_API_KEY}
 MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
 MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
 AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME}
-OBJECT_KEY=${OBJECT_KEY}
+//OBJECT_KEY=${OBJECT_KEY}//
 AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
 """
                     }
