@@ -78,6 +78,17 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
                 }
             }
         }
+        stage('Debug Object Key') {
+            steps {
+                dir('CICD/mlflow') {
+                    sh """
+                    echo "Debugging .env file:"
+                    cat ../.env
+                    """
+                }
+            }
+        }
+
 
         stage('Run Training Script') {
             steps {
