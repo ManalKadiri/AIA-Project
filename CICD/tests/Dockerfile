@@ -2,7 +2,7 @@
 FROM python:3.9-slim
 
 # Définir le répertoire de travail
-WORKDIR /home/tests
+WORKDIR /home/app/tests
 
 # Installer les dépendances système nécessaires
 RUN apt-get update && apt-get install -y curl unzip && \
@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 
 # Copier les fichiers de tests
-COPY . /home/tests
+COPY . /home/app/tests
 
 # Commande par défaut pour exécuter les tests
 CMD ["pytest", "--maxfail=1", "--disable-warnings", "-q"]
