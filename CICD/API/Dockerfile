@@ -6,7 +6,7 @@ RUN pip install --upgrade pip
 RUN pip install boto3 fastapi uvicorn openpyxl matplotlib pandas numpy plotly seaborn mlflow xgboost
 
 # Définir les variables d'environnement dynamiques (elles seront injectées via Jenkins ou docker-compose)
-ENV MLFLOW_TRACKING_URI=""
+ENV APP_URI_MODEL=""
 ENV AWS_ACCESS_KEY_ID=""
 ENV AWS_SECRET_ACCESS_KEY=""
 ENV AWS_DEFAULT_REGION=""
