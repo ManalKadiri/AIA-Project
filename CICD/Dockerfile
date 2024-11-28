@@ -18,8 +18,13 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 COPY requirements.txt /dependencies/requirements.txt
 RUN pip install -r /dependencies/requirements.txt
 
+# Préparer les répertoires pour les artefacts et les fichiers temporaires
+RUN mkdir -p /home/app/artifacts /home/app/tmp /home/app/mlruns /home/app/tests
+
 # Copier les fichiers d'application, y compris train.py
 COPY . /home/app
+COPY tests /home/app/tests
+COPY send_email.py /home/app/send_email.py
 
 # Commande par défaut
 CMD ["python", "train.py"]
