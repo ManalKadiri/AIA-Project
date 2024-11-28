@@ -18,7 +18,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN mkdir -p /home/app/artifacts /home/app/tmp /home/app/mlruns
 
 # Copier tous les fichiers nécessaires (scripts Python, configurations, etc.)
-COPY CICD/mlflow/train.py /home/app/train.py
+COPY train.py /home/app/train.py
+
 
 # Configurer l'URI de suivi MLflow
 ENV MLFLOW_TRACKING_URI=$APP_URI_MODEL
