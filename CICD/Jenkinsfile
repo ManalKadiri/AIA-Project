@@ -107,12 +107,11 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
             }
         }
 
-        // Étape pour exécuter les tests
         stage('Run Tests') {
             steps {
-                dir('CICD/mlflow') {
+                dir('CICD/mlflow') { // Modifier le chemin pour inclure "mlflow"
                     script {
-                        // Vérifier que les fichiers de test sont montés correctement
+                        // Vérifier que les fichiers de tests sont montés correctement
                         sh """
                         docker run --env-file ../.env \
                             -v "\$(pwd)/tests:/home/app/tests" mlflow-image \
@@ -126,9 +125,9 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
                             pytest --maxfail=1 --disable-warnings -q /home/app/tests/test_data_preprocessing.py /home/app/tests/test_model_training.py
                         """, returnStatus: true)
 
-                        // Vérifier le résultat
+                        // Vérifier les résultats des tests
                         if (test_result != 0) {
-                            echo "Tests failed. Sending alert email..."
+                            echo "Tests échoués. Envoi d'un email d'alerte..."
                             sh """
                             docker run --env-file ../.env \
                                 -v "\$(pwd):/home/app" mlflow-image \
@@ -136,9 +135,9 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
                                 "Tests échoués" \
                                 "Un ou plusieurs tests ont échoué. Veuillez vérifier les logs Jenkins pour plus de détails."
                             """
-                            error "Tests failed. Pipeline stopped."
+                            error "Tests échoués. Pipeline arrêté."
                         } else {
-                            echo "All tests passed successfully."
+                            echo "Tous les tests ont réussi avec succès."
                         }
                     }
                 }
