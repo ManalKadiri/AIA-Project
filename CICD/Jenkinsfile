@@ -21,13 +21,14 @@ pipeline {
                 checkout scm
             }
         }
-    stage('Debug Checkout') {
-        steps {
-            dir('CICD/mlflow') {
-                sh 'ls -la'
-            }
-        }    
-    }
+        
+        stage('Debug Checkout') {
+            steps {
+                dir('CICD/mlflow') {
+                    sh 'ls -la'
+                }
+            }    
+        }
 
         stage('Build Docker Images') {
             steps {
@@ -51,18 +52,6 @@ pipeline {
                 dir('CICD/mlflow') {
                     sh """
                     docker run mlflow-image python -m pip list
-                    """
-                }
-            }
-        }
-
-        stage('Debug Docker Run') {
-            steps {
-                dir('CICD/mlflow') {
-                    sh """
-                    docker run --env-file ../.env \
-                        -v "\$(pwd):/home/app" \
-                        mlflow-image sh -c "ls -la /home/app"
                     """
                 }
             }
@@ -93,17 +82,6 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
             }
         }
 
-        stage('Debug Object Key') {
-            steps {
-                dir('CICD/mlflow') {
-                    sh """
-                    echo "Debugging .env file:"
-                    cat ../.env
-                    """
-                }
-            }
-        }
-
         stage('Run Training Script') {
             steps {
                 dir('CICD/mlflow') {
@@ -124,18 +102,29 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
                         docker build -t tests-image .
                         """
         
-                        // Vérifier que les fichiers de tests sont montés dans /home
+                        // Vérifier que les fichiers de tests sont montés dans /home/app
                         echo "Vérification des fichiers montés dans /home/app..."
                         sh """
-                        docker run --env-file ../.env tests-image pytest /home/app/test_data_preprocessing.py
+                        docker run --env-file ../.env \
+                            -v "\$(pwd):/home/app" tests-image \
+                            sh -c "ls -la /home/app"
                         """
 
-            
+                        // Exécuter les tests
+                        echo "Exécution des tests..."
+                        def test_result = sh(script: """
+                        docker run --env-file ../.env \
+                            -v "\$(pwd):/home/app" tests-image \
+                            pytest /home/app/test_data_preprocessing.py /home/app/test_model_training.py
+                        """, returnStatus: true)
+
                         // Vérifier les résultats des tests
                         if (test_result != 0) {
                             echo "Tests échoués. Envoi d'un email d'alerte..."
                             sh """
-                            docker run --env-file ../.env tests-image python /home/app/send_email.py\
+                            docker run --env-file ../.env \
+                                -v "\$(pwd):/home/app" tests-image \
+                                python /home/app/send_email.py \
                                 "Tests échoués" \
                                 "Un ou plusieurs tests ont échoué. Veuillez vérifier les logs Jenkins pour plus de détails."
                             """
@@ -147,10 +136,5 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
                 }
             }
         }
-
-
-
-
     }
 }
-        
