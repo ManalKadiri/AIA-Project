@@ -29,7 +29,7 @@ mlflow.set_experiment("mlflow-AIA")
 
 # AWS S3 Parameters
 bucket_name = os.getenv("AWS_S3_BUCKET_NAME")
-object_key = os.getenv("AWS_S3_OBJECT_KEY")
+object_key = os.getenv("OBJECT_KEY")
 local_file_path = "fraudTest.csv"
 
 # AWS Credentials (automatiquement pris en charge si configurés dans l'environnement)
