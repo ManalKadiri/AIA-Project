@@ -30,6 +30,7 @@ pipeline {
                         dir('CICD/mlflow') {
                             sh 'docker build -t mlflow-image .'
                         }
+                        
                     },
                     "Build API Image": {
                         dir('CICD/API') {
@@ -71,8 +72,7 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
                 dir('CICD/mlflow') {
                     sh """
                     docker run --env-file ../.env \
-                        -v "\$(pwd)/CICD/mlflow:/home/app" \
-                        mlflow-image
+                        -v "\$(pwd):/home/app" mlflow-image python /home/app/train.py
                     """
                 }
             }
