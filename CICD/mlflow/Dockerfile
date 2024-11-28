@@ -20,9 +20,6 @@ RUN mkdir -p /home/app/artifacts /home/app/tmp /home/app/mlruns
 # Copier tous les fichiers nécessaires (scripts Python, configurations, etc.)
 COPY . .
 
-# Exposer le port si un serveur est exécuté
-EXPOSE 4000
-
 # Ajouter des vérifications pour le contexte d'exécution
 RUN echo "Vérification du répertoire courant et des fichiers présents :" && ls -la
 
@@ -30,4 +27,4 @@ RUN echo "Vérification du répertoire courant et des fichiers présents :" && l
 ENV MLFLOW_TRACKING_URI=$APP_URI_MODEL
 
 # Commande par défaut
-CMD ["sh", "-c", "python train.py"]
+CMD ["sh", "-c", "mlflow server --backend-store-uri $BACKEND_STORE_URI_MODEL --default-artifact-root /home/app/artifacts --host 0.0.0.0 --port 4000"]
