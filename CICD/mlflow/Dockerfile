@@ -15,12 +15,17 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Préparer les répertoires pour les artefacts et les fichiers temporaires
-RUN mkdir -p /home/app/artifacts /home/app/tmp /home/app/mlruns
+RUN mkdir -p /home/app/artifacts /home/app/tmp /home/app/mlruns /home/app/tests
 
 # Copier tous les fichiers nécessaires (scripts Python, configurations, etc.)
 COPY train.py /home/app/train.py
-COPY test_data_preprocessing.py /home/app/test_data_preprocessing.py
-COPY test_model_training.py /home/app/test_model_training.py
+COPY send_email.py /home/app/send_email.py
+
+COPY CICD/tests/test_data_preprocessing.py /home/app/tests/test_data_preprocessing.py
+COPY CICD/tests/test_model_training.py /home/app/tests/test_model_training.py
+
+
+
 # Configurer l'URI de suivi MLflow
 ENV MLFLOW_TRACKING_URI=$APP_URI_MODEL
 
