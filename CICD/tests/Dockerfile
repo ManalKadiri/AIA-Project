@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y curl unzip && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+
 # Copier les fichiers de tests
 COPY . /home/tests
 
