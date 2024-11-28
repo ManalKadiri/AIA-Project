@@ -8,6 +8,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 import boto3
 from dotenv import load_dotenv 
+import os
 
 # Charger les variables d'environnement depuis le fichier .env
 load_dotenv()
