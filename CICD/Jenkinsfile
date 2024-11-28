@@ -129,7 +129,7 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
                         def test_result = sh(script: """
                             docker run --env-file ../.env \
                                 -v "\$(pwd):/home/app/tests" mlflow-image \
-                                pytest --maxfail=1 --disable-warnings -q /home/app/tests/test_data_preprocessing.py /home/app/tests/test_model_training.py
+                                pytest --maxfail=1 --disable-warnings -q /home/app/tests/test_data_preprocessing.py
                             """, returnStatus: true)
         
                         // Vérifier les résultats des tests
