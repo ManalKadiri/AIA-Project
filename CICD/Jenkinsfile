@@ -39,6 +39,16 @@ pipeline {
             }
         }
 
+        stage('Verify Dependencies') {
+            steps {
+                dir('CICD/mlflow') {
+                    sh """
+                    docker run mlflow-image python -m pip list
+                    """
+                }
+            }
+        }
+
         stage('Debug Docker Run') {
             steps {
                 dir('CICD/mlflow') {
@@ -102,19 +112,27 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
             steps {
                 dir('CICD') {
                     script {
+                        // Vérifier les fichiers de test montés dans le conteneur
+                        sh """
+                        docker run --env-file .env \
+                            -v "\$(pwd)/tests:/home/app/tests" mlflow-image \
+                            sh -c "ls -la /home/app/tests"
+                        """
+
+                        // Exécuter les tests et capturer le statut
                         def test_result = sh(script: """
                         docker run --env-file .env \
                             -v "\$(pwd)/tests:/home/app/tests" mlflow-image \
-                            mlflow-image sh -c "ls -la /home/app/tests"
                             pytest --maxfail=1 --disable-warnings -q /home/app/tests/test_data_preprocessing.py /home/app/tests/test_model_training.py
                         """, returnStatus: true)
 
-
-                        
+                        // Vérifier le statut des tests
                         if (test_result != 0) {
                             echo "Tests failed. Sending alert email..."
                             sh """
-                            python3 mlflow/send_email.py \
+                            docker run --env-file .env \
+                                -v "\$(pwd):/home/app" mlflow-image \
+                                python /home/app/send_email.py \
                                 "Tests échoués" \
                                 "Un ou plusieurs tests ont échoué. Veuillez vérifier les logs Jenkins pour plus de détails."
                             """
