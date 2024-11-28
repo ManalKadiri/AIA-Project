@@ -39,6 +39,19 @@ pipeline {
             }
         }
 
+        // Étape pour déboguer les fichiers dans le conteneur Docker
+        stage('Debug Docker Run') {
+            steps {
+                dir('CICD/mlflow') {
+                    sh """
+                    docker run --env-file ../.env \
+                        -v "\$(pwd):/home/app" \
+                        mlflow-image sh -c "ls -la /home/app"
+                    """
+                }
+            }
+        }
+
         stage('Generate .env File') {
             steps {
                 dir('CICD') {
