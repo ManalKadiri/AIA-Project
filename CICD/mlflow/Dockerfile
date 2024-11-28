@@ -19,7 +19,7 @@ RUN mkdir -p /home/app/artifacts /home/app/tmp /home/app/mlruns
 
 # Copier tous les fichiers nécessaires (scripts Python, configurations, etc.)
 COPY train.py /home/app/train.py
-COPY send_email.py /home/app/send_email.py
+#COPY send_email.py /home/app/send_email.py
 
 #COPY CICD/tests/test_data_preprocessing.py /home/app/tests/test_data_preprocessing.py
 #COPY CICD/tests/test_model_training.py /home/app/tests/test_model_training.py
