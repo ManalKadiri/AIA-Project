@@ -26,6 +26,7 @@ COPY CICD/tests/test_model_training.py /home/app/tests/test_model_training.py
 
 
 
+
 # Configurer l'URI de suivi MLflow
 ENV MLFLOW_TRACKING_URI=$APP_URI_MODEL
 
