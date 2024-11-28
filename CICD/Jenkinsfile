@@ -116,20 +116,20 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
 
         stage('Run Tests') {
             steps {
-                dir('CICD/mlflow') { 
+                dir('CICD/tests') { 
                     script {
                         // Vérifier que les fichiers de tests sont présents
                         sh """
                         docker run --env-file ../.env \
-                            -v "\$(pwd):/home/app" mlflow-image \
-                            sh -c "ls -la /home/app"
+                            -v "\$(pwd):/home/app/tests" mlflow-image \
+                            sh -c "ls -la /home/app/tests"
                         """
         
-                        // Exécuter les tests directement depuis /home/app
+                        // Exécuter les tests directement
                         def test_result = sh(script: """
                             docker run --env-file ../.env \
-                                -v "\$(pwd):/home/app" mlflow-image \
-                                pytest --maxfail=1 --disable-warnings -q /home/app/test_data_preprocessing.py /home/app/test_model_training.py
+                                -v "\$(pwd):/home/app/tests" mlflow-image \
+                                pytest --maxfail=1 --disable-warnings -q /home/app/tests/test_data_preprocessing.py /home/app/tests/test_model_training.py
                             """, returnStatus: true)
         
                         // Vérifier les résultats des tests
@@ -137,7 +137,7 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
                             echo "Tests échoués. Envoi d'un email d'alerte..."
                             sh """
                             docker run --env-file ../.env \
-                                -v "\$(pwd):/home/app" mlflow-image \
+                                -v "\$(pwd):/home/app/tests" mlflow-image \
                                 python /home/app/send_email.py \
                                 "Tests échoués" \
                                 "Un ou plusieurs tests ont échoué. Veuillez vérifier les logs Jenkins pour plus de détails."
@@ -152,5 +152,3 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
         }
     }
 }
-
-
