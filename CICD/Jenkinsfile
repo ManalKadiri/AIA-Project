@@ -81,12 +81,11 @@ AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
             steps {
                 dir('CICD/mlflow') {
                     sh """
-                    docker run --env-file ../.env \
-                        -v "\$(pwd):/home/app" \
-                        mlflow-image python /home/app/train.py
+                    docker run --env-file ../.env mlflow-image python /home/app/train.py
                     """
                 }
             }
         }
+
     }
 }
