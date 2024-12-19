@@ -1,0 +1,194 @@
+pipeline {
+    agent any
+    environment {
+        APP_URI_MODEL = credentials('app-uri-model')
+        APP_URI_API = credentials('app-uri-api')
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+        BACKEND_STORE_URI_MODEL = credentials('backend-store-uri-model')
+        BACKEND_STORE_URI_API = credentials('backend-store-uri-api')
+        ARTIFACT_STORE_URI = credentials('artifact-store-uri')
+        POSTMARK_API_KEY = credentials('postmark-api-key')
+        MLFLOW_EXPERIMENT_NAME = credentials('mlflow-experiment-name')
+        MLFLOW_TRACKING_URI = credentials('mlflow-tracking-uri')
+        AWS_S3_BUCKET_NAME = credentials('aws-s3-bucket-name')
+        OBJECT_KEY = credentials('object-key')
+        AWS_DEFAULT_REGION = credentials('aws-default-region')
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Debug Checkout') {
+            steps {
+                dir('CICD/mlflow') {
+                    sh 'ls -la'
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                parallel (
+                    "Build MLflow Image": {
+                        dir('CICD/mlflow') {
+                            sh 'docker build -t mlflow-image .'
+                        }
+                    },
+                    "Build API Image": {
+                        dir('CICD/API') {
+                            sh 'docker build -t fraud-detection-api .'
+                        }
+                    }
+                )
+            }
+        }
+
+        stage('Verify Dependencies') {
+            steps {
+                dir('CICD/mlflow') {
+                    sh 'docker run mlflow-image python -m pip list'
+                }
+            }
+        }
+
+        stage('Generate .env File') {
+            steps {
+                dir('CICD') {
+                    script {
+                        writeFile file: '.env', text: """
+APP_URI_MODEL=${APP_URI_MODEL}
+APP_URI_API=${APP_URI_API}
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+BACKEND_STORE_URI_MODEL=${BACKEND_STORE_URI_MODEL}
+BACKEND_STORE_URI_API=${BACKEND_STORE_URI_API}
+ARTIFACT_STORE_URI=${ARTIFACT_STORE_URI}
+POSTMARK_API_KEY=${POSTMARK_API_KEY}
+MLFLOW_EXPERIMENT_NAME=${MLFLOW_EXPERIMENT_NAME}
+MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
+AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME}
+OBJECT_KEY=${OBJECT_KEY}
+AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+"""
+                    }
+                    sh 'cat .env'
+                }
+            }
+        }
+
+        stage('Run Training Script') {
+            steps {
+                dir('CICD/mlflow') {
+                    sh 'docker run --env-file ../.env mlflow-image python /home/app/train.py'
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                dir('CICD/tests') {
+                    script {
+                        echo "Construction de l'image Docker pour les tests..."
+                        sh 'docker build -t tests-image .'
+                        
+                        echo "Vérification des fichiers montés dans /home/app..."
+                        sh 'docker run --env-file ../.env -v "$(pwd):/home/app" tests-image sh -c "ls -la /home/app"'
+
+                        echo "Exécution des tests..."
+                        def test_result = sh(script: """
+                        docker run --env-file ../.env \
+                            -v "\$(pwd):/home/app" tests-image \
+                            pytest /home/app/test_data_preprocessing.py /home/app/test_model_training.py
+                        """, returnStatus: true)
+
+                        if (test_result != 0) {
+                            echo "Tests échoués. Envoi d'un email d'alerte..."
+                            sh 'docker run --env-file ../.env -v "$(pwd):/home/app" tests-image python /home/app/send_email.py "Tests échoués" "Un ou plusieurs tests ont échoué."'
+                            error "Tests échoués. Pipeline arrêté."
+                        } else {
+                            echo "Tous les tests ont réussi avec succès."
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Validate Model Performance') {
+            steps {
+                dir('CICD/mlflow') {
+                    script {
+                        def validationResult = sh(
+                            script: """
+                            docker run --env-file ../.env \
+                                -v "\$(pwd):/home/app" mlflow-image \
+                                python /home/app/check_model_performance.py
+                            """,
+                            returnStatus: true
+                        )
+                        if (validationResult != 0) {
+                            echo "Validation échouée : Modèle non conforme."
+                            currentBuild.result = 'UNSTABLE'
+                        } else {
+                            echo "Validation réussie : Modèle conforme."
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Rollback to Previous Model (if needed)') {
+            when {
+                expression { currentBuild.result == "UNSTABLE" }
+            }
+            steps {
+                dir('CICD/mlflow') {
+                    script {
+                        try {
+                            echo "Tentative de rollback vers un modèle stable..."
+                            sh """
+                            docker run --env-file ../.env \
+                                -v "\$(pwd):/home/app" mlflow-image \
+                                python /home/app/rollback_model.py
+                            """
+                            echo "Rollback effectué avec succès."
+
+                            // Forcer Jenkins à considérer le build comme SUCCESS après rollback
+                            currentBuild.result = 'SUCCESS'
+                        } catch (Exception e) {
+                            echo "Erreur pendant le rollback : ${e.getMessage()}"
+                            error "Le rollback a échoué. Vérifiez les logs pour diagnostiquer."
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy API') {
+            when {
+                expression { currentBuild.result == "SUCCESS" || currentBuild.result == "UNSTABLE" }
+            }
+            steps {
+                dir('CICD/API') {
+                    echo "Déploiement de l'API avec le modèle actuel ou rollback..."
+                    sh 'docker run --network host -d -v "$(pwd):/home/app" fraud-detection-api python /home/app/api.py'
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo "Pipeline exécuté avec succès."
+        }
+        unstable {
+            echo "Pipeline terminé en état instable. Rollback effectué avec succès vers un modèle stable."
+        }
+        failure {
+            echo "Pipeline échoué. Vérifiez les logs pour diagnostiquer."
+        }
+    }
+
+}

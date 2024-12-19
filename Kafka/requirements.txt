@@ -1,0 +1,12 @@
+# same as producer
+requests
+pandas
+
+# librdkafka is managed with apt-get
+confluent_kafka 
+avro-python3
+boto3
+
+# required to execute the model
+mlflow
+xgboost

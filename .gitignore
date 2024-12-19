@@ -1,0 +1,21 @@
+# Ignorer les fichiers sensibles
+.env
+
+# Ignorer les fichiers volumineux ou non nécessaires
+*.mp4
+
+# Ignorer les fichiers temporaires ou générés
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+
+# Autres fichiers ou dossiers à ignorer (ajustez selon votre projet)
+logs/
+*.log
+CICD/tests/fraudTest.csv
+<<<<<<< HEAD
+=======
+mlflow/fraudTest.csv
+
+>>>>>>> cf4dece (Initial commit after resetting Git history)
